@@ -11,7 +11,7 @@ VERBOSE="false"
 
 CASKS=(visual-studio-code gcloud-cli opencode-desktop)
 CASK_APP_PATHS=("/Applications/Visual Studio Code.app" "" "")
-FORMULAS=(opencode googleworkspace-cli node pnpm rtk ripgrep fd jq yq tree bat gh shellcheck shfmt)
+FORMULAS=(opencode googleworkspace-cli node pnpm python rtk ripgrep fd jq yq tree bat gh shellcheck shfmt)
 DEAD_SYMLINKS=(/opt/homebrew/bin/code /opt/homebrew/bin/code-tunnel)
 VSCODE_EXTENSIONS=(sst-dev.opencode)
 

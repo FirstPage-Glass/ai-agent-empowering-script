@@ -71,7 +71,7 @@ irm https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script
 | shfmt | brew formula | winget | Shell formatter |
 | tree | brew formula | built-in | Directory tree |
 | PowerShell 7 | — | winget | Cross-platform shell |
-| Python 3 | — | winget | Python runtime |
+| Python 3 | brew formula | winget | Python runtime |
 
 ## After install
 
