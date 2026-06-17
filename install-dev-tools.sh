@@ -10,6 +10,13 @@ die()  { printf "${RED}✘ %b${NC}\n" "$*" >&2; exit 1; }
 
 MODE="install"
 ASSUME_YES="false"
+DRY_RUN="false"
+
+CASKS=(visual-studio-code gcloud-cli)
+CASK_APP_PATHS=("/Applications/Visual Studio Code.app" "")
+FORMULAS=(opencode googleworkspace-cli)
+DEAD_SYMLINKS=(/opt/homebrew/bin/code /opt/homebrew/bin/code-tunnel)
+VSCODE_EXTENSIONS=(sst-dev.opencode)
 
 for arg in "$@"; do
   case "$arg" in
@@ -19,13 +26,17 @@ for arg in "$@"; do
     -y|--yes)
       ASSUME_YES="true"
       ;;
+    --dry-run)
+      DRY_RUN="true"
+      ;;
     -h|--help)
       cat <<EOF
-Usage: $0 [uninstall|--uninstall|remove] [-y|--yes]
+Usage: $0 [uninstall|--uninstall|remove] [-y|--yes] [--dry-run]
 
 Without arguments, installs development tools.
 Use uninstall, --uninstall, or remove to uninstall development tools.
 Use -y or --yes to skip uninstall confirmation.
+Use --dry-run to preview actions without changing your system.
 EOF
       exit 0
       ;;
@@ -35,6 +46,14 @@ EOF
   esac
 done
 
+run_cmd() {
+  if [[ "$DRY_RUN" == "true" ]]; then
+    info "Would run: $*"
+  else
+    "$@"
+  fi
+}
+
 if [[ "$(uname -s)" != "Darwin" ]]; then
   die "This script only supports macOS (detected: $(uname -s))."
 fi
@@ -42,6 +61,11 @@ fi
 if ! command -v brew >/dev/null 2>&1; then
   if [[ "$MODE" == "uninstall" ]]; then
     warn "Homebrew not found. Nothing to uninstall."
+    exit 0
+  fi
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    info "Would install Homebrew."
     exit 0
   fi
 
@@ -59,6 +83,19 @@ fi
 
 command -v brew >/dev/null 2>&1 || die "Homebrew is installed but not on PATH. Open a new terminal window and re-run this script."
 
+remove_dead_symlink() {
+  local path="$1"
+  if [[ -L "$path" && ! -e "$path" ]]; then
+    if [[ "$DRY_RUN" == "true" ]]; then
+      info "Would remove dead symlink $path."
+    else
+      info "Removing dead symlink $path..."
+      rm "$path"
+      ok "Removed $path."
+    fi
+  fi
+}
+
 install_cask() {
   local name="$1"
   local app_path="${2:-}"
@@ -67,9 +104,13 @@ install_cask() {
   elif [[ -n "$app_path" && -e "$app_path" ]]; then
     ok "$name already exists at $app_path."
   else
-    info "Installing $name (cask)..."
-    brew install --cask "$name"
-    ok "$name installed."
+    if [[ "$DRY_RUN" == "true" ]]; then
+      info "Would install $name (cask)."
+    else
+      info "Installing $name (cask)..."
+      brew install --cask "$name"
+      ok "$name installed."
+    fi
   fi
 }
 
@@ -78,9 +119,13 @@ install_formula() {
   if brew list "$name" >/dev/null 2>&1; then
     ok "$name already installed."
   else
-    info "Installing $name..."
-    brew install "$name"
-    ok "$name installed."
+    if [[ "$DRY_RUN" == "true" ]]; then
+      info "Would install $name."
+    else
+      info "Installing $name..."
+      brew install "$name"
+      ok "$name installed."
+    fi
   fi
 }
 
@@ -88,13 +133,21 @@ uninstall_cask() {
   local name="$1"
   local app_path="${2:-}"
   if brew list --cask "$name" >/dev/null 2>&1; then
-    info "Uninstalling $name (cask)..."
-    brew uninstall --cask "$name"
-    ok "$name uninstalled."
+    if [[ "$DRY_RUN" == "true" ]]; then
+      info "Would uninstall $name (cask)."
+    else
+      info "Uninstalling $name (cask)..."
+      brew uninstall --cask "$name"
+      ok "$name uninstalled."
+    fi
   elif [[ -n "$app_path" && -e "$app_path" ]]; then
-    info "Removing $app_path..."
-    rm -rf "$app_path"
-    ok "$name app removed."
+    if [[ "$DRY_RUN" == "true" ]]; then
+      info "Would remove $app_path."
+    else
+      info "Removing $app_path..."
+      rm -rf "$app_path"
+      ok "$name app removed."
+    fi
   else
     ok "$name (cask) is not installed."
   fi
@@ -103,16 +156,20 @@ uninstall_cask() {
 uninstall_formula() {
   local name="$1"
   if brew list "$name" >/dev/null 2>&1; then
-    info "Uninstalling $name..."
-    brew uninstall "$name"
-    ok "$name uninstalled."
+    if [[ "$DRY_RUN" == "true" ]]; then
+      info "Would uninstall $name."
+    else
+      info "Uninstalling $name..."
+      brew uninstall "$name"
+      ok "$name uninstalled."
+    fi
   else
     ok "$name is not installed."
   fi
 }
 
 confirm_uninstall() {
-  if [[ "$ASSUME_YES" == "true" ]]; then
+  if [[ "$ASSUME_YES" == "true" || "$DRY_RUN" == "true" ]]; then
     return 0
   fi
 
@@ -121,15 +178,21 @@ confirm_uninstall() {
   [[ "$answer" == "yes" ]] || die "Uninstall cancelled."
 }
 
+find_code_bin() {
+  if command -v code >/dev/null 2>&1; then
+    command -v code
+  elif [[ -x "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]]; then
+    printf '%s\n' "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+  else
+    return 1
+  fi
+}
+
 install_vscode_extension() {
   local extension="$1"
   local code_bin=""
 
-  if command -v code >/dev/null 2>&1; then
-    code_bin="$(command -v code)"
-  elif [[ -x "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]]; then
-    code_bin="/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
-  else
+  if ! code_bin="$(find_code_bin)"; then
     warn "VS Code command not found. Install extension manually: $extension"
     return 0
   fi
@@ -137,10 +200,63 @@ install_vscode_extension() {
   if "$code_bin" --list-extensions 2>/dev/null | grep -Fx "$extension" >/dev/null; then
     ok "$extension extension already installed."
   else
-    info "Installing VS Code extension $extension..."
-    "$code_bin" --install-extension "$extension"
-    ok "$extension extension installed."
+    if [[ "$DRY_RUN" == "true" ]]; then
+      info "Would install VS Code extension $extension."
+    else
+      info "Installing VS Code extension $extension..."
+      "$code_bin" --install-extension "$extension"
+    fi
   fi
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    ok "$extension extension install check previewed."
+  elif "$code_bin" --list-extensions 2>/dev/null | grep -Fx "$extension" >/dev/null; then
+    ok "$extension extension verified."
+  else
+    warn "$extension extension install could not be verified."
+  fi
+}
+
+install_all_casks() {
+  local i
+  for ((i = 0; i < ${#CASKS[@]}; i++)); do
+    install_cask "${CASKS[$i]}" "${CASK_APP_PATHS[$i]}"
+  done
+}
+
+install_all_formulas() {
+  local formula
+  for formula in "${FORMULAS[@]}"; do
+    install_formula "$formula"
+  done
+}
+
+uninstall_all_casks() {
+  local i
+  for ((i = 0; i < ${#CASKS[@]}; i++)); do
+    uninstall_cask "${CASKS[$i]}" "${CASK_APP_PATHS[$i]}"
+  done
+}
+
+uninstall_all_formulas() {
+  local formula
+  for formula in "${FORMULAS[@]}"; do
+    uninstall_formula "$formula"
+  done
+}
+
+remove_all_dead_symlinks() {
+  local path
+  for path in "${DEAD_SYMLINKS[@]}"; do
+    remove_dead_symlink "$path"
+  done
+}
+
+install_all_vscode_extensions() {
+  local extension
+  for extension in "${VSCODE_EXTENSIONS[@]}"; do
+    install_vscode_extension "$extension"
+  done
 }
 
 print_version() {
@@ -157,27 +273,33 @@ if [[ "$MODE" == "uninstall" ]]; then
   confirm_uninstall
 
   info "Uninstalling development tools..."
-  uninstall_cask    visual-studio-code "/Applications/Visual Studio Code.app"
-  uninstall_formula opencode
-  uninstall_cask    gcloud-cli
-  uninstall_formula googleworkspace-cli
+  uninstall_all_casks
+  uninstall_all_formulas
 
-  cat <<EOF
+  if [[ "$DRY_RUN" == "true" ]]; then
+    cat <<EOF
+
+${BOLD}Dry-run complete.${NC}
+
+No changes were made. Homebrew would be kept installed.
+EOF
+  else
+    cat <<EOF
 
 ${BOLD}Uninstall complete.${NC}
 
 Homebrew was kept installed.
 EOF
+  fi
   exit 0
 fi
 
 info "Installing development tools..."
 
-install_cask    visual-studio-code "/Applications/Visual Studio Code.app"
-install_vscode_extension sst-dev.opencode
-install_formula opencode
-install_cask    gcloud-cli
-install_formula googleworkspace-cli
+remove_all_dead_symlinks
+install_all_casks
+install_all_vscode_extensions
+install_all_formulas
 
 info "Verifying installations..."
 print_version "VS Code"                 code     --version
