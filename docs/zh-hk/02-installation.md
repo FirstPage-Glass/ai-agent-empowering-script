@@ -2,7 +2,7 @@
 
 ## 第一步：執行安裝腳本 📥
 
-我們已經準備好一鍵安裝腳本，會幫你裝好 opencode Desktop 以及其他常用工具。
+我們已經準備好一鍵安裝腳本，會幫你裝好 OpenCode Desktop 以及其他常用工具。
 
 ### Mac 使用者 🍎
 
@@ -28,7 +28,7 @@ irm https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script
 
 ## 第二步：開始使用 🎉
 
-裝完之後，雙擊 opencode Desktop 圖示就開得。
+裝完之後，雙擊 OpenCode Desktop 圖示就開得。
 
 **就是這麼簡單。** 不需要註冊、不需要 API Key、不需要信用卡。
 
@@ -36,7 +36,7 @@ irm https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script
 
 ```
 你：Hello 👋
-opencode：Hello! 有什麼我可以幫你的？
+OpenCode：Hello! 有什麼我可以幫你的？
 ```
 
 > 🎊 **恭喜你，你已經可以開始使用了！**
@@ -47,12 +47,12 @@ opencode：Hello! 有什麼我可以幫你的？
 
 如果你之後想試試更強大的模型（例如 Claude、GPT-5 等），有兩個選擇：
 
-### 1️⃣ opencode Zen 🟢
-opencode 官方提供的付費模型服務，品質有保證。
-在 opencode Desktop 輸入 `/connect` 然後按 Enter，它會引導你完成設定。
+### 1️⃣ OpenCode Zen 🟢
+OpenCode 官方提供的付費模型服務，品質有保證。
+在 OpenCode Desktop 輸入 `/connect` 然後按 Enter，它會引導你完成設定。
 
 ### 2️⃣ 自己的 API Key 🔑
 如果你本身有 OpenAI 或 Anthropic 的 API Key，
 可以到 Settings（設定）頁面貼上即可使用。
 
-> 💡 **什麼是 API Key？** 它就像一組密碼，讓 opencode 可以連接 AI 服務。不過你現在還不需要，先用免費模型就夠了。
+> 💡 **什麼是 API Key？** 它就像一組密碼，讓 OpenCode 可以連接 AI 服務。不過你現在還不需要，先用免費模型就夠了。

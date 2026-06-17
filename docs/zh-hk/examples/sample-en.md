@@ -21,7 +21,7 @@ Most experts agree that the future is hybrid: a mix of remote and in-office work
 
 ## 💬 建議指令
 
-複製以下文字，貼到 opencode：
+複製以下文字，貼到 OpenCode：
 
 ```
 把以下內容翻譯成繁體中文：

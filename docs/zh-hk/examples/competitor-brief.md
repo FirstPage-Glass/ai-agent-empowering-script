@@ -14,7 +14,7 @@
 
 ## 💬 建議指令
 
-複製以下文字，貼到 opencode：
+複製以下文字，貼到 OpenCode：
 
 ```
 幫我研究 TechFlow Solutions 這家公司：

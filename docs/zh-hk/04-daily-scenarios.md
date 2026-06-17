@@ -15,12 +15,12 @@
 4. 語氣要專業但友善
 ```
 
-**opencode 會做：**
+**OpenCode 會做：**
 - ✅ 寫好完整的 email 內容給你看
 - ✅ 你可以要求修改語氣、增減內容
 - ✅ 滿意後直接複製貼到 Outlook / Gmail
 
-> 📂 **試試這個範例：** [`examples/email-context.md`](examples/email-context.md) — 裡面有客戶背景和會議資料，直接用 opencode 打開來練習。
+> 📂 **試試這個範例：** [`examples/email-context.md`](examples/email-context.md) — 裡面有客戶背景和會議資料，直接用 OpenCode 打開來練習。
 
 ---
 
@@ -40,7 +40,7 @@
 [貼上你的文字]
 ```
 
-> 📂 **試試這個範例：** [`examples/long-text.txt`](examples/long-text.txt) — 一段冗長的產品描述，試試讓 opencode 幫你濃縮。
+> 📂 **試試這個範例：** [`examples/long-text.txt`](examples/long-text.txt) — 一段冗長的產品描述，試試讓 OpenCode 幫你濃縮。
 
 ---
 
@@ -60,7 +60,7 @@
 [貼上文件或拖曳檔案]
 ```
 
-> 📂 **試試這個範例：** [`examples/sample-en.md`](examples/sample-en.md) — 一段英文內容，試試讓 opencode 翻譯成中文。
+> 📂 **試試這個範例：** [`examples/sample-en.md`](examples/sample-en.md) — 一段英文內容，試試讓 OpenCode 翻譯成中文。
 
 ---
 
@@ -77,7 +77,7 @@
 [拖曳 Excel 檔案到對話視窗]
 ```
 
-> 📂 **試試這個範例：** [`examples/orders.csv`](examples/orders.csv) — 一份模擬的客戶訂單資料，試試讓 opencode 幫你分析。
+> 📂 **試試這個範例：** [`examples/orders.csv`](examples/orders.csv) — 一份模擬的客戶訂單資料，試試讓 OpenCode 幫你分析。
 
 ---
 
@@ -90,7 +90,7 @@
 [貼上文章內容或網址]
 ```
 
-> 📂 **試試這個範例：** [`examples/long-article.md`](examples/long-article.md) — 一篇模擬文章，試試讓 opencode 幫你抓重點。
+> 📂 **試試這個範例：** [`examples/long-article.md`](examples/long-article.md) — 一篇模擬文章，試試讓 OpenCode 幫你抓重點。
 
 ---
 
@@ -102,7 +102,7 @@
 幫我想 10 個吸引人的活動名稱，以及 3 種不同的活動形式。
 ```
 
-> 📂 **試試這個範例：** [`examples/event-brief.md`](examples/event-brief.md) — 一份活動簡報，試試讓 opencode 幫你 brainstorm。
+> 📂 **試試這個範例：** [`examples/event-brief.md`](examples/event-brief.md) — 一份活動簡報，試試讓 OpenCode 幫你 brainstorm。
 
 ---
 
@@ -117,6 +117,6 @@
 4. 跟我們相比，優缺點是什麼？
 ```
 
-> ⚠️ opencode 可以上網搜尋資料，但建議你還是要自己驗證資訊的正確性。
+> ⚠️ OpenCode 可以上網搜尋資料，但建議你還是要自己驗證資訊的正確性。
 
-> 📂 **試試這個範例：** [`examples/competitor-brief.md`](examples/competitor-brief.md) — 一間公司的基本資料，試試讓 opencode 幫你深入研究。
+> 📂 **試試這個範例：** [`examples/competitor-brief.md`](examples/competitor-brief.md) — 一間公司的基本資料，試試讓 OpenCode 幫你深入研究。
