@@ -1,0 +1,16 @@
+Customer Name,Order Number,Order Date,Product Name,Quantity,Unit Price,Total Amount
+Wang Meiling,ORD-2024-001,2024-01-15,Enterprise Efficiency Suite - Standard,1,15000,15000
+Zhang Zhiming,ORD-2024-002,2024-01-18,Data Analytics Platform - Professional,2,25000,50000
+Chen Yating,ORD-2024-003,2024-01-22,Cloud Storage Solution - Enterprise,5,8000,40000
+Lin Dawei,ORD-2024-004,2024-02-01,Enterprise Efficiency Suite - Advanced,1,35000,35000
+Li Peishan,ORD-2024-005,2024-02-05,Collaboration Toolkit,3,6000,18000
+Huang Jianhua,ORD-2024-006,2024-02-10,Data Analytics Platform - Standard,1,12000,12000
+Wu Yijun,ORD-2024-007,2024-02-15,Enterprise Efficiency Suite - Standard,2,15000,30000
+Liu Zhihao,ORD-2024-008,2024-02-20,Cloud Storage Solution - Professional,3,12000,36000
+Zhao Meiqi,ORD-2024-009,2024-03-01,Enterprise Efficiency Suite - Advanced,1,35000,35000
+Zhou Mingde,ORD-2024-010,2024-03-05,Collaboration Toolkit,5,6000,30000
+Wang Meiling,ORD-2024-011,2024-03-10,Data Analytics Platform - Professional,1,25000,25000
+Zhang Zhiming,ORD-2024-012,2024-03-15,Cloud Storage Solution - Enterprise,2,8000,16000
+Lin Dawei,ORD-2024-013,2024-03-20,Enterprise Efficiency Suite - Standard,3,15000,45000
+Chen Yating,ORD-2024-014,2024-03-25,Collaboration Toolkit,2,6000,12000
+Huang Jianhua,ORD-2024-015,2024-04-01,Data Analytics Platform - Standard,2,12000,24000

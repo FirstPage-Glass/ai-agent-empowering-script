@@ -1,0 +1,11 @@
+Our product is a revolutionary, disruptive, all-encompassing enterprise-grade solution that effectively, efficiently, and significantly boosts your team's overall work efficiency and productivity levels. Through our exclusively developed, patented, industry-leading artificial intelligence technology, we can provide your enterprise with unprecedented, unparalleled, exceptional value experiences. Our platform integrates multiple functionalities, including but not limited to automated workflow management, intelligent data analytics, collaborative workspaces, and customizable report generation. Regardless of your enterprise size or industry category, our solution can perfectly, seamlessly, and flexibly meet your needs. We believe that choosing our product will be one of the wisest, most correct, and most strategically significant decisions in your enterprise's development journey.
+
+---
+
+## 💬 Suggested Prompt
+
+Copy the following text and paste it into OpenCode:
+
+```
+This text is too wordy. Condense it to under 100 words while keeping the key points.
+```
