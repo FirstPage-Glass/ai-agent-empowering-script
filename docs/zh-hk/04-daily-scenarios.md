@@ -1,6 +1,10 @@
-# Part 4：日常應用場景
+# Part 4：日常應用場景 🚀
 
-## 場景一：寫 Email
+> 💡 每個場景都附有**範例檔案**，在 `examples/` 資料夾裡。你可以直接下載來練習！
+
+---
+
+## 場景一：寫 Email ✉️
 
 **你對它說：**
 ```
@@ -12,13 +16,15 @@
 ```
 
 **opencode 會做：**
-- 寫好完整的 email 內容給你看
-- 你可以要求修改語氣、增減內容
-- 滿意後直接複製貼到 Outlook/Gmail
+- ✅ 寫好完整的 email 內容給你看
+- ✅ 你可以要求修改語氣、增減內容
+- ✅ 滿意後直接複製貼到 Outlook / Gmail
+
+> 📂 **試試這個範例：** [`examples/email-context.md`](examples/email-context.md) — 裡面有客戶背景和會議資料，直接用 opencode 打開來練習。
 
 ---
 
-## 場景二：修改文章
+## 場景二：修改文章 ✏️
 
 **你對它說：**
 ```
@@ -34,9 +40,11 @@
 [貼上你的文字]
 ```
 
+> 📂 **試試這個範例：** [`examples/long-text.txt`](examples/long-text.txt) — 一段冗長的產品描述，試試讓 opencode 幫你濃縮。
+
 ---
 
-## 場景三：翻譯
+## 場景三：翻譯 🌐
 
 **你對它說：**
 ```
@@ -52,9 +60,11 @@
 [貼上文件或拖曳檔案]
 ```
 
+> 📂 **試試這個範例：** [`examples/sample-en.md`](examples/sample-en.md) — 一段英文內容，試試讓 opencode 翻譯成中文。
+
 ---
 
-## 場景四：整理資料
+## 場景四：整理資料 📊
 
 **你對它說：**
 ```
@@ -67,9 +77,11 @@
 [拖曳 Excel 檔案到對話視窗]
 ```
 
+> 📂 **試試這個範例：** [`examples/orders.csv`](examples/orders.csv) — 一份模擬的客戶訂單資料，試試讓 opencode 幫你分析。
+
 ---
 
-## 場景五：摘要重點
+## 場景五：摘要重點 📝
 
 **你對它說：**
 ```
@@ -78,9 +90,11 @@
 [貼上文章內容或網址]
 ```
 
+> 📂 **試試這個範例：** [`examples/long-article.md`](examples/long-article.md) — 一篇模擬文章，試試讓 opencode 幫你抓重點。
+
 ---
 
-## 場景六：腦力激盪
+## 場景六：腦力激盪 💡
 
 **你對它說：**
 ```
@@ -88,9 +102,11 @@
 幫我想 10 個吸引人的活動名稱，以及 3 種不同的活動形式。
 ```
 
+> 📂 **試試這個範例：** [`examples/event-brief.md`](examples/event-brief.md) — 一份活動簡報，試試讓 opencode 幫你 brainstorm。
+
 ---
 
-## 場景七：研究調查
+## 場景七：研究調查 🔍
 
 **你對它說：**
 ```
@@ -101,4 +117,6 @@
 4. 跟我們相比，優缺點是什麼？
 ```
 
-> 💡 opencode 可以上網搜尋資料，但建議你還是要自己驗證資訊的正確性。
+> ⚠️ opencode 可以上網搜尋資料，但建議你還是要自己驗證資訊的正確性。
+
+> 📂 **試試這個範例：** [`examples/competitor-brief.md`](examples/competitor-brief.md) — 一間公司的基本資料，試試讓 opencode 幫你深入研究。
