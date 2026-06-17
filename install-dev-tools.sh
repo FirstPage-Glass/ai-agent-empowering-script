@@ -14,7 +14,7 @@ DRY_RUN="false"
 
 CASKS=(visual-studio-code gcloud-cli)
 CASK_APP_PATHS=("/Applications/Visual Studio Code.app" "")
-FORMULAS=(opencode googleworkspace-cli)
+FORMULAS=(opencode googleworkspace-cli node pnpm rtk ripgrep fd jq yq tree bat gh shellcheck shfmt)
 DEAD_SYMLINKS=(/opt/homebrew/bin/code /opt/homebrew/bin/code-tunnel)
 VSCODE_EXTENSIONS=(sst-dev.opencode)
 
@@ -259,6 +259,20 @@ install_all_vscode_extensions() {
   done
 }
 
+verify_rtk_token_killer() {
+  local out
+  if ! command -v rtk >/dev/null 2>&1; then
+    warn "rtk is not on PATH yet. Open a new terminal and run: rtk gain"
+    return 0
+  fi
+
+  if out="$(rtk gain 2>&1)"; then
+    ok "rtk gain: $(printf '%s' "$out" | head -n1)"
+  else
+    warn "rtk gain failed. Verify this is rtk-ai/rtk, not another rtk package."
+  fi
+}
+
 print_version() {
   local label="$1"; shift
   local out
@@ -306,6 +320,10 @@ print_version "VS Code"                 code     --version
 print_version "opencode"                opencode --version
 print_version "gcloud"                  gcloud   --version
 print_version "gws (Google Workspace)"  gws      --version
+print_version "node"                    node     --version
+print_version "pnpm"                    pnpm     --version
+print_version "rtk"                     rtk      --version
+verify_rtk_token_killer
 
 cat <<EOF
 
@@ -317,4 +335,6 @@ Next steps (run these yourself whenever you're ready):
 
 Tip: if any command above was reported as not on PATH, open a ${BOLD}new terminal window${NC}
 so your PATH refreshes, then try again.
+
+Agent tip: prefer ${BOLD}rtk${NC}, ${BOLD}rg${NC}, and ${BOLD}fd${NC} for high-output commands and code search.
 EOF
