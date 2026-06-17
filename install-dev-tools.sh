@@ -3,15 +3,11 @@ set -euo pipefail
 
 GREEN=$'\033[1;32m'; BLUE=$'\033[1;34m'; YELLOW=$'\033[1;33m'; RED=$'\033[1;31m'; BOLD=$'\033[1m'; NC=$'\033[0m'
 
-info() { printf "${BLUE}==>${NC} %b\n" "$*"; }
-ok()   { printf "${GREEN}✔ %b${NC}\n" "$*"; }
-warn() { printf "${YELLOW}!  %b${NC}\n" "$*"; }
-die()  { printf "${RED}✘ %b${NC}\n" "$*" >&2; exit 1; }
-
 MODE="install"
 ASSUME_YES="false"
 DRY_RUN="false"
 SKIP_CLEANUP="false"
+VERBOSE="false"
 
 CASKS=(visual-studio-code gcloud-cli opencode-desktop)
 CASK_APP_PATHS=("/Applications/Visual Studio Code.app" "" "")
@@ -21,41 +17,42 @@ VSCODE_EXTENSIONS=(sst-dev.opencode)
 
 for arg in "$@"; do
   case "$arg" in
-    uninstall|--uninstall|remove)
-      MODE="uninstall"
-      ;;
-    -y|--yes)
-      ASSUME_YES="true"
-      ;;
-    --dry-run)
-      DRY_RUN="true"
-      ;;
-    --no-cleanup)
-      SKIP_CLEANUP="true"
-      ;;
+    uninstall|--uninstall|remove) MODE="uninstall" ;;
+    -y|--yes) ASSUME_YES="true" ;;
+    --dry-run) DRY_RUN="true" ;;
+    --no-cleanup) SKIP_CLEANUP="true" ;;
+    --verbose) VERBOSE="true" ;;
     -h|--help)
       cat <<EOF
-Usage: $0 [uninstall|--uninstall|remove] [-y|--yes] [--dry-run] [--no-cleanup]
+Usage: $0 [uninstall|--uninstall|remove] [-y|--yes] [--dry-run] [--no-cleanup] [--verbose]
 
 Without arguments, installs development tools.
-Use uninstall, --uninstall, or remove to uninstall development tools.
-Use -y or --yes to skip uninstall confirmation.
-Use --dry-run to preview actions without changing your system.
-Use --no-cleanup to skip brew autoremove and brew cleanup.
+Use --verbose to show detailed brew output.
 EOF
-      exit 0
-      ;;
-    *)
-      die "Unknown argument: $arg"
-      ;;
+      exit 0 ;;
+    *) die "Unknown argument: $arg" ;;
   esac
 done
 
-run_cmd() {
-  if [[ "$DRY_RUN" == "true" ]]; then
-    info "Would run: $*"
+die() { printf "${RED}✘ %b${NC}\n" "$*" >&2; exit 1; }
+
+STEP=0; TOTAL=0
+init_steps() { TOTAL="$1"; STEP=0; }
+next_step() {
+  STEP=$((STEP + 1))
+  printf "${BLUE}[%d/%d]${NC} %s..." "$STEP" "$TOTAL" "$1"
+}
+ok_step() { printf " ${GREEN}✓${NC}\n"; }
+skip_step() { printf " ${YELLOW}−${NC} %s\n" "$1"; }
+
+run_quiet() {
+  local log; log="$(mktemp)"
+  if "$@" >"$log" 2>&1; then
+    rm -f "$log"; return 0
   else
-    "$@"
+    local rc=$?
+    [[ "$VERBOSE" == "true" ]] && cat "$log"
+    rm -f "$log"; return "$rc"
   fi
 }
 
@@ -65,19 +62,13 @@ fi
 
 if ! command -v brew >/dev/null 2>&1; then
   if [[ "$MODE" == "uninstall" ]]; then
-    warn "Homebrew not found. Nothing to uninstall."
-    exit 0
+    echo "Homebrew not found. Nothing to uninstall."; exit 0
   fi
-
   if [[ "$DRY_RUN" == "true" ]]; then
-    info "Would install Homebrew."
-    exit 0
+    echo "Would install Homebrew."; exit 0
   fi
-
-  info "Homebrew not found - installing Homebrew..."
+  echo "Installing Homebrew..."
   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-else
-  ok "Homebrew already installed."
 fi
 
 if [[ -x /opt/homebrew/bin/brew ]]; then
@@ -85,303 +76,157 @@ if [[ -x /opt/homebrew/bin/brew ]]; then
 elif [[ -x /usr/local/bin/brew ]]; then
   eval "$(/usr/local/bin/brew shellenv)"
 fi
-
 command -v brew >/dev/null 2>&1 || die "Homebrew is installed but not on PATH. Open a new terminal window and re-run this script."
 
-remove_dead_symlink() {
-  local path="$1"
-  if [[ -L "$path" && ! -e "$path" ]]; then
-    if [[ "$DRY_RUN" == "true" ]]; then
-      info "Would remove dead symlink $path."
-    else
-      info "Removing dead symlink $path..."
+brew_install() {
+  local name="$1" app_path="${2:-}"
+  if brew list --cask "$name" >/dev/null 2>&1; then return 0; fi
+  if [[ -n "$app_path" && -e "$app_path" ]]; then return 0; fi
+  if [[ "$DRY_RUN" == "true" ]]; then return 0; fi
+  run_quiet brew install --cask "$name"
+}
+
+brew_install_formula() {
+  local name="$1"
+  if brew list "$name" >/dev/null 2>&1; then return 0; fi
+  if [[ "$DRY_RUN" == "true" ]]; then return 0; fi
+  run_quiet brew install "$name"
+}
+
+brew_uninstall() {
+  local name="$1" app_path="${2:-}"
+  if brew list --cask "$name" >/dev/null 2>&1; then
+    [[ "$DRY_RUN" == "true" ]] && return 0
+    run_quiet brew uninstall --cask "$name"
+  elif [[ -n "$app_path" && -e "$app_path" ]]; then
+    [[ "$DRY_RUN" == "true" ]] && return 0
+    rm -rf "$app_path"
+  fi
+}
+
+brew_uninstall_formula() {
+  local name="$1"
+  if brew list "$name" >/dev/null 2>&1; then
+    [[ "$DRY_RUN" == "true" ]] && return 0
+    run_quiet brew uninstall "$name" 2>/dev/null || true
+  fi
+}
+
+remove_dead_symlinks() {
+  local path
+  for path in "${DEAD_SYMLINKS[@]}"; do
+    if [[ -L "$path" && ! -e "$path" ]]; then
       rm "$path"
-      ok "Removed $path."
     fi
-  fi
-}
-
-install_cask() {
-  local name="$1"
-  local app_path="${2:-}"
-  if brew list --cask "$name" >/dev/null 2>&1; then
-    ok "$name (cask) already installed."
-  elif [[ -n "$app_path" && -e "$app_path" ]]; then
-    ok "$name already exists at $app_path."
-  else
-    if [[ "$DRY_RUN" == "true" ]]; then
-      info "Would install $name (cask)."
-    else
-      info "Installing $name (cask)..."
-      brew install --cask "$name"
-      ok "$name installed."
-    fi
-  fi
-}
-
-install_formula() {
-  local name="$1"
-  if brew list "$name" >/dev/null 2>&1; then
-    ok "$name already installed."
-  else
-    if [[ "$DRY_RUN" == "true" ]]; then
-      info "Would install $name."
-    else
-      info "Installing $name..."
-      brew install "$name"
-      ok "$name installed."
-    fi
-  fi
-}
-
-uninstall_cask() {
-  local name="$1"
-  local app_path="${2:-}"
-  if brew list --cask "$name" >/dev/null 2>&1; then
-    if [[ "$DRY_RUN" == "true" ]]; then
-      info "Would uninstall $name (cask)."
-    else
-      info "Uninstalling $name (cask)..."
-      brew uninstall --cask "$name"
-      ok "$name uninstalled."
-    fi
-  elif [[ -n "$app_path" && -e "$app_path" ]]; then
-    if [[ "$DRY_RUN" == "true" ]]; then
-      info "Would remove $app_path."
-    else
-      info "Removing $app_path..."
-      rm -rf "$app_path"
-      ok "$name app removed."
-    fi
-  else
-    ok "$name (cask) is not installed."
-  fi
-}
-
-uninstall_formula() {
-  local name="$1"
-  if brew list "$name" >/dev/null 2>&1; then
-    if [[ "$DRY_RUN" == "true" ]]; then
-      info "Would uninstall $name."
-    else
-      info "Uninstalling $name..."
-      if brew uninstall "$name" 2>/dev/null; then
-        ok "$name uninstalled."
-      else
-        warn "$name is required by other formulas; skipped."
-      fi
-    fi
-  else
-    ok "$name is not installed."
-  fi
-}
-
-cleanup_brew() {
-  if [[ "$SKIP_CLEANUP" == "true" ]]; then
-    ok "Brew cleanup skipped."
-    return 0
-  fi
-
-  info "Cleaning up Homebrew..."
-  if [[ "$DRY_RUN" == "true" ]]; then
-    info "Would run: brew autoremove"
-    info "Would run: brew cleanup"
-  else
-    brew autoremove
-    brew cleanup
-    ok "Homebrew cleanup complete."
-  fi
-}
-
-confirm_uninstall() {
-  if [[ "$ASSUME_YES" == "true" || "$DRY_RUN" == "true" ]]; then
-    return 0
-  fi
-
-  printf "%b" "${YELLOW}!  This will uninstall VS Code, opencode, gcloud-cli, and googleworkspace-cli. Type 'yes' to continue: ${NC}"
-  read -r answer
-  [[ "$answer" == "yes" ]] || die "Uninstall cancelled."
+  done
 }
 
 find_code_bin() {
-  if command -v code >/dev/null 2>&1; then
-    command -v code
-  elif [[ -x "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]]; then
-    printf '%s\n' "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
-  else
-    return 1
+  if command -v code 2>/dev/null; then return 0; fi
+  if [[ -x "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]]; then
+    echo "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
+    return 0
   fi
+  return 1
 }
 
 install_vscode_extension() {
-  local extension="$1"
-  local code_bin=""
-
-  if ! code_bin="$(find_code_bin)"; then
-    warn "VS Code command not found. Install extension manually: $extension"
-    return 0
-  fi
-
-  if "$code_bin" --list-extensions 2>/dev/null | grep -Fx "$extension" >/dev/null; then
-    ok "$extension extension already installed."
-  else
-    if [[ "$DRY_RUN" == "true" ]]; then
-      info "Would install VS Code extension $extension."
-    else
-      info "Installing VS Code extension $extension..."
-      "$code_bin" --install-extension "$extension"
-    fi
-  fi
-
-  if [[ "$DRY_RUN" == "true" ]]; then
-    ok "$extension extension install check previewed."
-  elif "$code_bin" --list-extensions 2>/dev/null | grep -Fx "$extension" >/dev/null; then
-    ok "$extension extension verified."
-  else
-    warn "$extension extension install could not be verified."
-  fi
+  local ext="$1"; local bin
+  bin="$(find_code_bin)" || return 0
+  if "$bin" --list-extensions 2>/dev/null | grep -Fx "$ext" >/dev/null; then return 0; fi
+  if [[ "$DRY_RUN" == "true" ]]; then return 0; fi
+  run_quiet "$bin" --install-extension "$ext"
 }
 
-install_all_casks() {
-  local i
-  for ((i = 0; i < ${#CASKS[@]}; i++)); do
-    install_cask "${CASKS[$i]}" "${CASK_APP_PATHS[$i]}"
-  done
-}
-
-install_all_formulas() {
-  local formula
-  for formula in "${FORMULAS[@]}"; do
-    install_formula "$formula"
-  done
-}
-
-uninstall_all_casks() {
-  local i
-  for ((i = 0; i < ${#CASKS[@]}; i++)); do
-    uninstall_cask "${CASKS[$i]}" "${CASK_APP_PATHS[$i]}"
-  done
-}
-
-uninstall_all_formulas() {
-  local formula
-  for formula in "${FORMULAS[@]}"; do
-    uninstall_formula "$formula"
-  done
-}
-
-remove_all_dead_symlinks() {
-  local path
-  for path in "${DEAD_SYMLINKS[@]}"; do
-    remove_dead_symlink "$path"
-  done
-}
-
-install_all_vscode_extensions() {
-  local extension
-  for extension in "${VSCODE_EXTENSIONS[@]}"; do
-    install_vscode_extension "$extension"
-  done
-}
-
-verify_rtk_token_killer() {
+verify_rtk() {
   local out
-  if ! command -v rtk >/dev/null 2>&1; then
-    warn "rtk is not on PATH yet. Open a new terminal and run: rtk gain"
-    return 0
-  fi
-
-  if out="$(rtk gain 2>&1)"; then
-    ok "rtk gain: $(printf '%s' "$out" | head -n1)"
-  else
-    warn "rtk gain failed. Verify this is rtk-ai/rtk, not another rtk package."
-  fi
+  if ! command -v rtk >/dev/null 2>&1; then return 0; fi
+  out="$(rtk gain 2>&1)" || true
 }
 
-init_rtk_for_opencode() {
-  if ! command -v rtk >/dev/null 2>&1; then
-    return 0
-  fi
-
-  if [[ "$DRY_RUN" == "true" ]]; then
-    info "Would run: rtk init -g --opencode"
-    return 0
-  fi
-
-  if rtk init --show 2>/dev/null | grep -q "opencode"; then
-    ok "rtk already initialized for opencode."
-  else
-    info "Initializing rtk for opencode..."
-    rtk init -g --opencode
-    ok "rtk initialized for opencode."
-  fi
+init_rtk() {
+  if ! command -v rtk >/dev/null 2>&1; then return 0; fi
+  if [[ "$DRY_RUN" == "true" ]]; then return 0; fi
+  if rtk init --show 2>/dev/null | grep -q "opencode"; then return 0; fi
+  run_quiet rtk init -g --opencode
 }
 
 print_version() {
   local label="$1"; shift
   local out
-  if out="$("$@" 2>&1)"; then
-    ok "$label: $(printf '%s' "$out" | head -n1)"
-  else
-    warn "$label: installed, but '$1' is not on this shell's PATH yet."
-  fi
+  out="$("$@" 2>&1)" || true
 }
 
+# ── Uninstall ──
 if [[ "$MODE" == "uninstall" ]]; then
-  confirm_uninstall
-
-  info "Uninstalling development tools..."
-  uninstall_all_casks
-  uninstall_all_formulas
-  cleanup_brew
-
-  if [[ "$DRY_RUN" == "true" ]]; then
-    cat <<EOF
-
-${BOLD}Dry-run complete.${NC}
-
-No changes were made. Homebrew would be kept installed.
-EOF
-  else
-    cat <<EOF
-
-${BOLD}Uninstall complete.${NC}
-
-Homebrew was kept installed.
-EOF
+  if [[ "$ASSUME_YES" != "true" && "$DRY_RUN" != "true" ]]; then
+    printf "%b" "${YELLOW}!  Uninstall VS Code, opencode, gcloud-cli, and other tools? Type 'yes' to continue: ${NC}"
+    read -r answer
+    [[ "$answer" == "yes" ]] || die "Cancelled."
   fi
+
+  echo ""
+  init_steps 2
+  next_step "Uninstalling packages"
+  for ((i=0; i<${#CASKS[@]}; i++)); do brew_uninstall "${CASKS[$i]}" "${CASK_APP_PATHS[$i]}"; done
+  for f in "${FORMULAS[@]}"; do brew_uninstall_formula "$f"; done
+  ok_step
+
+  if [[ "$SKIP_CLEANUP" != "true" ]]; then
+    next_step "Cleaning up"
+    [[ "$DRY_RUN" != "true" ]] && { run_quiet brew autoremove; run_quiet brew cleanup; }
+    ok_step
+  fi
+
+  echo ""
+  echo "${BOLD}Uninstall complete.${NC} Homebrew was kept installed."
   exit 0
 fi
 
-info "Installing development tools..."
+# ── Install ──
+echo ""
+echo "${BOLD}Installing development tools...${NC}"
+echo ""
 
-remove_all_dead_symlinks
-install_all_casks
-install_all_vscode_extensions
-install_all_formulas
-cleanup_brew
+init_steps 5
 
-info "Verifying installations..."
-print_version "VS Code"                 code     --version
-print_version "opencode"                opencode --version
-print_version "gcloud"                  gcloud   --version
-print_version "gws (Google Workspace)"  gws      --version
-print_version "node"                    node     --version
-print_version "pnpm"                    pnpm     --version
-print_version "rtk"                     rtk      --version
-verify_rtk_token_killer
-init_rtk_for_opencode
+next_step "Installing packages"
+remove_dead_symlinks
+if [[ "$DRY_RUN" != "true" ]]; then
+  for ((i=0; i<${#CASKS[@]}; i++)); do brew_install "${CASKS[$i]}" "${CASK_APP_PATHS[$i]}"; done
+  for f in "${FORMULAS[@]}"; do brew_install_formula "$f"; done
+fi
+ok_step
 
-cat <<EOF
+next_step "Installing VS Code extension"
+[[ "$DRY_RUN" != "true" ]] && install_vscode_extension "${VSCODE_EXTENSIONS[0]}"
+ok_step
 
-${BOLD}All done.${NC}
+if [[ "$SKIP_CLEANUP" != "true" ]]; then
+  next_step "Cleaning up"
+  [[ "$DRY_RUN" != "true" ]] && { run_quiet brew autoremove; run_quiet brew cleanup; }
+  ok_step
+fi
 
-Next steps (run these yourself whenever you're ready):
-  gcloud init        # sign in and configure the Google Cloud CLI
-  gws auth setup     # one-time Google Workspace auth (requires gcloud)
+next_step "Verifying installations"
+if [[ "$DRY_RUN" != "true" ]]; then
+  print_version "VS Code" code --version
+  print_version "opencode" opencode --version
+  print_version "gcloud" gcloud --version
+  print_version "gws" gws --version
+  print_version "node" node --version
+  print_version "pnpm" pnpm --version
+  print_version "rtk" rtk --version
+  verify_rtk
+fi
+ok_step
 
-Tip: if any command above was reported as not on PATH, open a ${BOLD}new terminal window${NC}
-so your PATH refreshes, then try again.
+next_step "Configuring tools"
+[[ "$DRY_RUN" != "true" ]] && init_rtk
+ok_step
 
-Agent tip: prefer ${BOLD}rtk${NC}, ${BOLD}rg${NC}, and ${BOLD}fd${NC} for high-output commands and code search.
-EOF
+echo ""
+echo "${BOLD}All done.${NC}"
+echo ""
+echo "Next: gcloud init && gws auth setup"
+echo "Tip: use ${BOLD}rtk${NC}, ${BOLD}rg${NC}, ${BOLD}fd${NC} for agent-friendly commands."
