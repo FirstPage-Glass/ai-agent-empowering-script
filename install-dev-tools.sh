@@ -11,9 +11,10 @@ die()  { printf "${RED}✘ %b${NC}\n" "$*" >&2; exit 1; }
 MODE="install"
 ASSUME_YES="false"
 DRY_RUN="false"
+SKIP_CLEANUP="false"
 
-CASKS=(visual-studio-code gcloud-cli)
-CASK_APP_PATHS=("/Applications/Visual Studio Code.app" "")
+CASKS=(visual-studio-code gcloud-cli opencode-desktop)
+CASK_APP_PATHS=("/Applications/Visual Studio Code.app" "" "")
 FORMULAS=(opencode googleworkspace-cli node pnpm rtk ripgrep fd jq yq tree bat gh shellcheck shfmt)
 DEAD_SYMLINKS=(/opt/homebrew/bin/code /opt/homebrew/bin/code-tunnel)
 VSCODE_EXTENSIONS=(sst-dev.opencode)
@@ -29,14 +30,18 @@ for arg in "$@"; do
     --dry-run)
       DRY_RUN="true"
       ;;
+    --no-cleanup)
+      SKIP_CLEANUP="true"
+      ;;
     -h|--help)
       cat <<EOF
-Usage: $0 [uninstall|--uninstall|remove] [-y|--yes] [--dry-run]
+Usage: $0 [uninstall|--uninstall|remove] [-y|--yes] [--dry-run] [--no-cleanup]
 
 Without arguments, installs development tools.
 Use uninstall, --uninstall, or remove to uninstall development tools.
 Use -y or --yes to skip uninstall confirmation.
 Use --dry-run to preview actions without changing your system.
+Use --no-cleanup to skip brew autoremove and brew cleanup.
 EOF
       exit 0
       ;;
@@ -160,11 +165,31 @@ uninstall_formula() {
       info "Would uninstall $name."
     else
       info "Uninstalling $name..."
-      brew uninstall "$name"
-      ok "$name uninstalled."
+      if brew uninstall "$name" 2>/dev/null; then
+        ok "$name uninstalled."
+      else
+        warn "$name is required by other formulas; skipped."
+      fi
     fi
   else
     ok "$name is not installed."
+  fi
+}
+
+cleanup_brew() {
+  if [[ "$SKIP_CLEANUP" == "true" ]]; then
+    ok "Brew cleanup skipped."
+    return 0
+  fi
+
+  info "Cleaning up Homebrew..."
+  if [[ "$DRY_RUN" == "true" ]]; then
+    info "Would run: brew autoremove"
+    info "Would run: brew cleanup"
+  else
+    brew autoremove
+    brew cleanup
+    ok "Homebrew cleanup complete."
   fi
 }
 
@@ -273,6 +298,25 @@ verify_rtk_token_killer() {
   fi
 }
 
+init_rtk_for_opencode() {
+  if ! command -v rtk >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if [[ "$DRY_RUN" == "true" ]]; then
+    info "Would run: rtk init -g --opencode"
+    return 0
+  fi
+
+  if rtk init --show 2>/dev/null | grep -q "opencode"; then
+    ok "rtk already initialized for opencode."
+  else
+    info "Initializing rtk for opencode..."
+    rtk init -g --opencode
+    ok "rtk initialized for opencode."
+  fi
+}
+
 print_version() {
   local label="$1"; shift
   local out
@@ -289,6 +333,7 @@ if [[ "$MODE" == "uninstall" ]]; then
   info "Uninstalling development tools..."
   uninstall_all_casks
   uninstall_all_formulas
+  cleanup_brew
 
   if [[ "$DRY_RUN" == "true" ]]; then
     cat <<EOF
@@ -314,6 +359,7 @@ remove_all_dead_symlinks
 install_all_casks
 install_all_vscode_extensions
 install_all_formulas
+cleanup_brew
 
 info "Verifying installations..."
 print_version "VS Code"                 code     --version
@@ -324,6 +370,7 @@ print_version "node"                    node     --version
 print_version "pnpm"                    pnpm     --version
 print_version "rtk"                     rtk      --version
 verify_rtk_token_killer
+init_rtk_for_opencode
 
 cat <<EOF
 
