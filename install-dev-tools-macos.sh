@@ -24,7 +24,7 @@ for arg in "$@"; do
     --verbose) VERBOSE="true" ;;
     -h|--help)
       cat <<EOF
-Usage: $0 [uninstall|--uninstall|remove] [-y|--yes] [--dry-run] [--no-cleanup] [--verbose]
+Usage: install-dev-tools-macos.sh [uninstall|--uninstall|remove] [-y|--yes] [--dry-run] [--no-cleanup] [--verbose]
 
 Without arguments, installs development tools.
 Use --verbose to show detailed brew output.
