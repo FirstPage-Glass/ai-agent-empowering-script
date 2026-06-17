@@ -1,6 +1,8 @@
 # Part 7：AI Agent 的 SEO 工具生態系 🛠️
 
 > OpenCode 嘅能力可以透過各種工具大大擴展。以下係 SEO agency 最常用嘅工具分類，每個都可以俾你嘅 Agent 使用。
+>
+> **MCP 係咩？** MCP（Model Context Protocol）係 AI Agent 連接外部工具嘅標準協議 — 可以理解為「AI 嘅 USB 插頭」。只要工具支援 MCP，你嘅 Agent 就可以直接使用，唔使任何 custom integration。下面好多工具都有 MCP server 可以用。
 
 ---
 
@@ -78,7 +80,7 @@
 | 項目 | 說明 |
 |---|---|
 | 這是什麼 | 技術 SEO 爬蟲，分析網站架構同 SEO 問題 |
-| 費用 | 免費版可爬 500 個 URLs，付費 £149/年 |
+| 費用 | 免費版可爬 500 個 URLs，付費 £199/年 |
 | 怎麼用 | Agent 分析網站架構、Redirect Chain、Broken Links、Meta Tags |
 | SEO 使用情境 | 「幫我分析呢個網站嘅 redirect chain，搵出有冇 redirect loops」 |
 
@@ -149,7 +151,7 @@
 | 項目 | 說明 |
 |---|---|
 | 這是什麼 | 全流程 AI SEO Agent：研究、寫作、優化、監控、修正 |
-| 費用 | $49/月起，所有功能包晒 |
+| 費用 | $15/月起（Solo），$39/月（Starter） |
 | 怎麼用 | Agent 自動化內容研究、SERP 分析、內容生成、排名監控 |
 | SEO 使用情境 | 「幫我用 Frase 研究『AI SEO 工具』呢個主題，生成一份內容 brief」 |
 
@@ -158,7 +160,7 @@
 | 項目 | 說明 |
 |---|---|
 | 這是什麼 | 內容優化工具，用 NLP 即時評分內容 |
-| 費用 | $49/月起 |
+| 費用 | $49/月起（年繳價） |
 | 怎麼用 | Agent 分析 SERP 競爭者內容結構，俾出優化建議 |
 | SEO 使用情境 | 「幫我分析呢篇文對比 SERP 前 10 名，俾出實體密度同 heading 結構建議」 |
 

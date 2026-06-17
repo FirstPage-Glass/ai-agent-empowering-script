@@ -9,6 +9,8 @@
 
 **AI Agent = AI 大腦 🧠 + 動手做事的能力 🛠️**
 
+> 💡 **OpenCode 是開源軟件**（MIT 授權，GitHub 172k+ 星）— 最受歡迎的開源 AI Agent。完全免費、透明，程式碼可以自己檢查。
+
 ---
 
 ## 跟 ChatGPT 有什麼不同？ 🤔

@@ -1,10 +1,27 @@
 # Part 8: Choosing the Right LLM 🧠
 
 > Different LLMs have different strengths. Here's a selection guide based on daily SEO agency workflows.
+>
+> **⚡ Quick picks:**
+> - 👋 Just starting? → **OpenCode Go** (free built-in models, $5 first month)
+> - ✍️ Writing content? → **Claude Sonnet 4.6** ($3/$15)
+> - 🔧 Technical SEO scripts? → **DeepSeek V4 Pro** ($0.44/$0.87) — best value
+> - 🚀 Most powerful? → **Claude Fable 5** ($10/$50) or **GPT-5.5** ($5/$30)
+> - 🇨🇳 Chinese content? → **Qwen 3.7 Max** ($1.25/$3.75)
 
 ---
 
 ## 🚀 Flagship
+
+### Claude Fable 5 🏆
+
+| Item | Details |
+|---|---|
+| One-liner | Anthropic's most capable model (June 2026), top-tier reasoning |
+| Best for | 🧠 Complex SEO strategy, 📋 Deep competitor analysis, 🔬 Advanced data reasoning |
+| Not ideal for | ❌ Budget-conscious teams ($50/M tokens output) |
+| Cost | $10 input / $50 output per million tokens |
+| Example | "Analyze this entire competitor's backlink profile and content strategy, then create a 12-month SEO roadmap" |
 
 ### Claude Sonnet 4.6 🎯
 
@@ -16,21 +33,33 @@
 | Cost | $3 input / $15 output per million tokens |
 | Example | "Analyze the content strategies of these 5 competitors and give a gap analysis report" |
 
-### Claude Opus 4.7 💻
+### Claude Opus 4.7 / 4.8 💻
 
 | Item | Details |
 |---|---|
-| One-liner | Best coding (SWE-Bench 87.6%), top choice for technical SEO |
+| One-liner | Best coding (SWE-Bench Verified 82.0%), top choice for technical SEO |
 | Best for | 🐍 Python scraping scripts, 📊 Large-scale data processing, ⚙️ Technical SEO tool development |
 | Not ideal for | ❌ Daily content writing (Sonnet is sufficient and cheaper) |
 | Cost | $5 input / $25 output per million tokens |
 | Example | "Write a Python script to download data from Search Console API and analyze ranking trends" |
 
-### GPT-5.4 🚀
+> 💡 Opus 4.8 (released May 2026) improves to SWE-Bench Pro 69.2% at the same price.
+
+### GPT-5.5 🚀
 
 | Item | Details |
 |---|---|
-| One-liner | Most comprehensive Agent model — handles everything |
+| One-liner | OpenAI's newest flagship (April 2026), strongest agentic coding |
+| Best for | 🔗 Multi-step SEO workflows, 🛠️ Tool orchestration, 🤖 Complex Agent tasks |
+| Not ideal for | ❌ Tight budgets ($30/M tokens output) |
+| Cost | $5 input / $30 output per million tokens |
+| Example | "Automate this workflow: Search Console → analyze data → suggest improvements → save to Google Sheets" |
+
+### GPT-5.4 ⚖️
+
+| Item | Details |
+|---|---|
+| One-liner | Previous flagship — strong Agent model, better value than GPT-5.5 |
 | Best for | 🔗 Multi-step SEO workflows, 🛠️ Tool orchestration, 🤖 Complex Agent tasks |
 | Not ideal for | ❌ Tight budgets ($15/M tokens output) |
 | Cost | $2.50 input / $15 output per million tokens |
@@ -54,7 +83,7 @@
 
 | Item | Details |
 |---|---|
-| One-liner | Value king — coding near Claude Opus level but 34x cheaper |
+| One-liner | Value king — coding near Claude Opus level but ~29x cheaper |
 | Best for | 📝 High-volume content generation, 📊 Batch data analysis, 💰 Cost-sensitive projects |
 | Not ideal for | ❌ Complex tasks requiring top-tier reasoning |
 | Cost | $0.435 input / $0.87 output per million tokens |
@@ -100,7 +129,7 @@
 | One-liner | Best Chinese + coding, supports 200+ languages |
 | Best for | 🇨🇳 Chinese content creation, 🌏 Multilingual SEO, 🔄 Translation |
 | Not ideal for | ❌ US data sovereignty requirements |
-| Cost | $2.50 input / $7.50 output per million tokens |
+| Cost | $1.25 input / $3.75 output per million tokens (50% off list price of $2.50/$7.50) |
 | Example | "Translate this English SEO article into Chinese while preserving keyword placement" |
 
 ### Llama 4 Maverick 🦙
@@ -155,10 +184,11 @@
 | Scenario | Recommended LLM | Why |
 |---|---|---|
 | ✍️ Daily content creation | **Claude Sonnet 4.6** | Best balance of writing quality + analysis |
-| 📊 Data analysis reports | **Claude Sonnet 4.6** / **GPT-5.4** | Understands complex data, gives actionable insights |
-| 🔧 Technical SEO scripts | **Claude Opus 4.7** / **DeepSeek V4 Pro** | Best coding, or best value |
+| 📊 Data analysis reports | **Claude Sonnet 4.6** / **GPT-5.5** | Understands complex data, gives actionable insights |
+| 🔧 Technical SEO scripts | **Claude Opus 4.8** / **DeepSeek V4 Pro** | Best coding, or best value (~29x cheaper) |
 | 📝 High-volume content | **DeepSeek V4 Flash** / **GPT-5.4 Mini** | Cheapest, no pain at scale |
 | 🇨🇳 Chinese content / translation | **Qwen 3.7 Max** | Best Chinese, multilingual |
-| 🚀 Workflow automation | **GPT-5.4** | Most comprehensive Agent capabilities |
+| 🚀 Workflow automation | **GPT-5.5** | Most comprehensive Agent capabilities |
+| 🧠 Complex strategy | **Claude Fable 5** | Top-tier reasoning, deep analysis |
 | 💰 Budget-first | **DeepSeek V4 Pro** | Best price-performance ratio |
 | 🆓 Free trial | **OpenCode Go** | $5/month to try multiple models |

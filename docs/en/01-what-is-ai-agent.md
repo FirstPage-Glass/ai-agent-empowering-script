@@ -9,6 +9,8 @@ Imagine you have a **super intern** 👨‍💻. They:
 
 **AI Agent = AI Brain 🧠 + Ability to Take Action 🛠️**
 
+> 💡 **OpenCode is open source** (MIT license, 172k+ GitHub stars) — the most popular open-source AI coding agent. It's free, transparent, and you can inspect the code yourself.
+
 ---
 
 ## How is it Different from ChatGPT? 🤔

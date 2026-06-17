@@ -4,6 +4,8 @@
 
 我們已經準備好一鍵安裝腳本，會幫你裝好 OpenCode Desktop 以及其他常用工具。
 
+**腳本會安裝：** OpenCode Desktop、Node.js、Python、Git、VS Code、Google Cloud CLI、Google Workspace CLI 等必備工具。
+
 ### Mac 使用者 🍎
 
 開啟「終端機」（Terminal），貼上以下指令後按 Enter：

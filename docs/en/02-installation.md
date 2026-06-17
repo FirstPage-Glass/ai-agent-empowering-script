@@ -4,6 +4,8 @@
 
 We've prepared a one-click installation script that will install OpenCode Desktop along with other useful tools.
 
+**The script installs:** OpenCode Desktop, Node.js, Python, Git, VS Code, Google Cloud CLI, Google Workspace CLI, and other essential developer tools.
+
 ### Mac Users 🍎
 
 Open Terminal and paste the following command, then press Enter:

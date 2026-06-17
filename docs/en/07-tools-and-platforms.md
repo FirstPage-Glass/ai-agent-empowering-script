@@ -1,6 +1,8 @@
 # Part 7: SEO Tools Ecosystem for AI Agents 🛠️
 
 > OpenCode's capabilities can be greatly extended through various tools. Below are the most commonly used tools for an SEO agency, organized by category.
+>
+> **What is MCP?** MCP (Model Context Protocol) is the standard way AI agents connect to external tools — think of it as a "USB port for AI." Once a tool supports MCP, your agent can use it directly without any custom integration. Many tools below have MCP servers available.
 
 ---
 
@@ -78,7 +80,7 @@
 | Item | Details |
 |---|---|
 | What it is | Technical SEO crawler, analyzes site architecture and SEO issues |
-| Cost | Free version crawls up to 500 URLs, paid £149/year |
+| Cost | Free version crawls up to 500 URLs, paid £199/year |
 | How to use | Agent analyzes site architecture, redirect chains, broken links, meta tags |
 | SEO use case | "Analyze this site's redirect chain and find any redirect loops" |
 
@@ -149,7 +151,7 @@
 | Item | Details |
 |---|---|
 | What it is | Full-workflow AI SEO Agent: research, writing, optimization, monitoring, correction |
-| Cost | From $49/month, all features included |
+| Cost | From $15/month (Solo), $39/month (Starter) |
 | How to use | Agent automates content research, SERP analysis, content generation, rank monitoring |
 | SEO use case | "Use Frase to research the topic 'AI SEO tools' and generate a content brief" |
 
@@ -158,7 +160,7 @@
 | Item | Details |
 |---|---|
 | What it is | Content optimization tool using NLP to score content in real-time |
-| Cost | From $49/month |
+| Cost | From $49/month (billed annually) |
 | How to use | Agent analyzes SERP competitor content structure and provides optimization suggestions |
 | SEO use case | "Analyze this article against the top 10 SERP results and suggest entity density and heading structure improvements" |
 
