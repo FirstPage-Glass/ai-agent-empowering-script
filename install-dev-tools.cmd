@@ -179,7 +179,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$c='%USERPROFILE%\.config\opencode\opencode.json';" ^
   "$p='%USERPROFILE%\.config\opencode\skills';" ^
   "if (-not (Test-Path $c)) {" ^
-  "  @{ '`$schema'='https://opencode.ai/config.json'; skills=@{ paths=@($p) } } | ConvertTo-Json -Depth 3 | Set-Content $c -Encoding UTF8;" ^
+  "  @{ '$schema'='https://opencode.ai/config.json'; skills=@{ paths=@($p) } } | ConvertTo-Json -Depth 3 | Set-Content $c -Encoding UTF8;" ^
   "  exit 0" ^
   "};" ^
   "$o = Get-Content $c -Raw | ConvertFrom-Json;" ^
