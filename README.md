@@ -29,12 +29,16 @@ chmod +x install-dev-tools-macos.sh
 
 ### One click (recommended)
 
-Download the repo and **double-click `install-dev-tools-windows.cmd`**. That's it — approve the single UAC prompt for the winget step and walk away. The launcher bypasses PowerShell's execution policy, removes the "downloaded from internet" block, and runs the installer for you.
+Download the repo and **double-click `install-dev-tools.cmd`**. That's it.
 
-> **Do not "Run as administrator".** Just double-click. The installer runs as your normal user and elevates *only* the winget step (one UAC prompt), because Scoop refuses to install under an administrator account. Running the whole thing elevated is unnecessary and works against Scoop.
+The installer handles everything:
+- Installs Git, Node.js, Python, VS Code, opencode CLI via winget
+- Installs gcloud CLI, ripgrep, fd, bat, gh, and more via Scoop
+- Downloads and installs rtk (Rust Token Killer) from GitHub
+- Installs pnpm and Google Workspace CLI via npm
+- Configures rtk for opencode
 
-> **Tip:** To avoid the one-time "Open File – Security Warning" dialog entirely, get the files with `git clone` instead of downloading a ZIP — git-cloned files are never tagged as downloaded.
->
+> **Tip:** To avoid the "Open File – Security Warning" dialog, use `git clone` instead of downloading a ZIP:
 > ```powershell
 > git clone https://github.com/FirstPage-Glass/ai-agent-empowering-script.git
 > cd ai-agent-empowering-script
@@ -42,41 +46,30 @@ Download the repo and **double-click `install-dev-tools-windows.cmd`**. That's i
 
 ### One line (PowerShell)
 
-Or open a **normal (non-admin) PowerShell** and run:
+Open a **normal (non-admin) PowerShell** and run:
 
 ```powershell
-irm https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script/main/install-dev-tools-windows.ps1 | iex
-```
-
-### Manual
-
-If you already have the `.ps1` locally, open a **normal (non-admin) PowerShell** and run:
-
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\install-dev-tools-windows.ps1
+irm https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script/main/install-dev-tools.cmd | iex
 ```
 
 ### Flags
 
 | Flag | Description |
 |---|---|
-| `-dryRun` | Preview without installing |
-| `-yes` | Skip confirmation prompts |
-| `-uninstall` | Remove all installed tools |
+| `uninstall` | Remove all installed tools |
 
 ## What gets installed
 
 | Tool | macOS | Windows | Purpose |
 |---|---|---|---|
-| opencode | brew formula | npm | AI coding agent |
-| opencode Desktop | brew cask | winget | Desktop app for opencode |
+| opencode CLI | brew formula | winget (SST.opencode) | AI coding agent (TUI) |
+| opencode Desktop | brew cask | winget (SST.OpenCodeDesktop) | Desktop app for opencode |
 | VS Code | brew cask | winget | Code editor |
-| gcloud CLI | brew cask | scoop | Google Cloud CLI |
+| gcloud CLI | brew cask | scoop (extras) | Google Cloud CLI |
 | gws CLI | brew formula | npm | Google Workspace CLI |
 | Node.js (LTS) | brew formula | winget | JavaScript runtime |
 | pnpm | brew formula | npm | Fast package manager |
-| rtk | brew formula | npm | LLM token proxy |
+| rtk | brew formula | GitHub release | LLM token proxy (Rust) |
 | ripgrep | brew formula | scoop | Code search |
 | fd | brew formula | scoop | File search |
 | jq | brew formula | scoop | JSON processor |
