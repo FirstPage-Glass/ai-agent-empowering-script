@@ -34,25 +34,19 @@ Before asking the user anything, check if `EMAIL` and `EMAIL_PASSWORD` are alrea
 
 **Step 2: Ask for credentials (only if needed)**
 
-Ask two separate questions using the question tool. Keep each question extremely short — one line only.
+Ask two separate questions using the question tool. Keep each question extremely short — one line only. Do NOT use markdown formatting (no code blocks, no bold, no backticks) in the terminal output.
 
 **Question 1:**
-```
-What's your Gmail address?
-```
+Ask: What's your Gmail address?
 
-After the user answers, output these instructions as plain text (not a question):
+After the user answers, output these instructions as plain text (not a question, no markdown):
 
-```
 To connect to your inbox, I need an app password.
 Get one at: https://myaccount.google.com/apppasswords
 (Enable 2-Step Verification first if needed. Name it anything → Generate → copy the 16-char password.)
-```
 
 **Question 2:**
-```
-Paste your app password:
-```
+Ask: Paste your app password:
 
 Do not echo, log, or repeat the password back to the user. Do not add extra explanation to the questions themselves.
 
