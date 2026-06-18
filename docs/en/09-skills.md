@@ -84,7 +84,13 @@ Let's walk through a real skill that ships with this project.
 
 ### What it does
 
-The **email-planner** skill connects to your Gmail inbox and classifies unread emails into four categories:
+The **email-planner** skill does three things:
+
+1. 📬 **Fetches** emails from the last 24 hours (configurable)
+2. 🔍 **Spots** anything that needs your attention
+3. ✍️ **Drafts** reply emails ready for you to send
+
+It classifies emails into four categories:
 
 | Category | Icon | Triggers on |
 |---|---|---|
@@ -95,10 +101,23 @@ The **email-planner** skill connects to your Gmail inbox and classifies unread e
 
 ### How to use it
 
-1. 📂 Put the `skills/email-planner/` folder in your project
-2. 💬 Tell the agent: "Check my inbox" or "Triage my emails"
-3. 📧 The agent asks for your email and app password
-4. ⚡ It runs the bundled script and shows you a grouped summary
+The skill is **auto-installed** when you run the install script. Just open opencode and say:
+
+```
+Check my inbox
+```
+
+Or:
+
+```
+What emails do I need to respond to?
+```
+
+The agent will:
+1. 📧 Ask for your email and app password (one time)
+2. ⚡ Fetch and classify your emails
+3. 🎯 Spot what needs action
+4. ✍️ Draft replies for each action item
 
 ### Getting an app password
 
@@ -114,34 +133,36 @@ The skill needs an **app password** to connect to Gmail (not your regular passwo
 ### Example output
 
 ```
-============================================================
-  Email Action Summary — 12 emails
-============================================================
+📬 Found 12 emails in the last 24 hours.
 
-  🔴 URGENT (2)
-  ----------------------------------------
-    Server outage — immediate action needed
-      From: ops@company.com
-      Date: Mon, 16 Jun 2026 09:30:00 +0000
+🔴 URGENT (1)
 
-  🟡 Action (3)
-  ----------------------------------------
-    Please review the Q3 budget proposal
-      From: finance@company.com
-      Date: Mon, 16 Jun 2026 08:15:00 +0000
+  1. Server outage — ops@company.com
+     → Action: Reply confirming you're investigating
+     → Draft:
+       "Hi team, I'm on it. Investigating the root cause now
+        and will update within the hour."
 
-  🔵 Meeting (2)
-  ----------------------------------------
-    Team standup — Tuesday 10am
-      From: calendar@company.com
-      Date: Sun, 15 Jun 2026 18:00:00 +0000
+🟡 Action (2)
 
-  ⚪ FYI (5)
-  ----------------------------------------
-    Weekly newsletter — AI trends
-      From: newsletter@techdigest.com
-      Date: Mon, 16 Jun 2026 06:00:00 +0000
-============================================================
+  2. Q3 budget proposal — finance@company.com
+     → Action: Review the proposal and reply with feedback by [date]
+     → Draft:
+       "Hi, thanks for sending this over. I'll review the proposal
+        and get back to you with feedback by [date]."
+
+  3. Client follow-up — sales@company.com
+     → Action: Reply to confirm next steps
+     → Draft:
+       "Hi [name], thanks for the call earlier. To confirm, our
+        next steps are: [list steps]. Let me know if I missed anything."
+
+🔵 Meeting (1)
+
+  4. Team standup Tuesday — calendar@company.com
+     → Action: Confirm attendance (no reply needed if auto-accepted)
+
+⚪ FYI (8) — no action needed
 ```
 
 ---
@@ -222,21 +243,29 @@ Open your project in OpenCode and ask something that matches your skill's descri
 
 ## Where to Put Skills 📁
 
-Skills live in a `skills/` folder inside your project:
+**User scope** (available in every project) — this is where the install script puts them:
+
+```
+~/.config/opencode/skills/
+├── email-planner/
+│   ├── SKILL.md
+│   └── scripts/
+│       └── email_planner.py
+└── my-other-skill/
+    └── SKILL.md
+```
+
+**Project scope** (available only in that project):
 
 ```
 my-project/
 ├── skills/
-│   ├── email-planner/
-│   │   ├── SKILL.md
-│   │   └── scripts/
-│   │       └── email_planner.py
-│   └── my-other-skill/
+│   └── my-skill/
 │       └── SKILL.md
 ├── src/
 └── ...
 ```
 
-The agent automatically discovers skills in the `skills/` folder when you open the project.
+The agent automatically discovers skills in both locations.
 
-> 💡 **Tip:** You can share skills across projects by copying the skill folder, or by keeping a shared `skills/` directory and symlinking to it.
+> 💡 **Tip:** User-scope skills are great for personal tools you use everywhere (like the email planner). Project-scope skills are better for project-specific workflows.

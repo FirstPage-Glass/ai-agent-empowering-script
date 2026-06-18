@@ -2,8 +2,8 @@
 import argparse
 import email
 import imaplib
+import json
 import os
-import re
 import sys
 from datetime import datetime, timedelta, timezone
 from email.header import decode_header
@@ -107,25 +107,20 @@ def parse_date(date_str):
         return None
 
 
-def fetch_emails(email_addr, password, hours=None):
+def fetch_emails(email_addr, password, hours=24):
     mail = imaplib.IMAP4_SSL(IMAP_SERVER, IMAP_PORT)
     mail.login(email_addr, password)
     mail.select("INBOX")
 
-    if hours:
-        since_date = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime("%d-%b-%Y")
-        status, data = mail.search(None, f'(SINCE "{since_date}")')
-    else:
-        status, data = mail.search(None, "UNSEEN")
+    since_date = (datetime.now(timezone.utc) - timedelta(hours=hours)).strftime("%d-%b-%Y")
+    status, data = mail.search(None, f'(SINCE "{since_date}")')
 
     if status != "OK":
-        print("No emails found.")
         mail.logout()
         return []
 
     msg_ids = data[0].split()
     if not msg_ids:
-        print("No emails found.")
         mail.logout()
         return []
 
@@ -140,13 +135,11 @@ def fetch_emails(email_addr, password, hours=None):
         frm = decode_mime_header(msg.get("From"))
         date_str = msg.get("Date", "")
         body = get_body(msg)
-        dt = parse_date(date_str)
         category = classify(subj, body)
         emails.append({
             "from": frm,
             "subject": subj,
             "date": date_str,
-            "datetime": dt,
             "body": body[:500],
             "category": category,
         })
@@ -161,8 +154,8 @@ def format_summary(emails):
         categories[e["category"]].append(e)
 
     lines = []
-    lines.append(f"# Email Action Summary")
-    lines.append(f"")
+    lines.append("# Email Action Summary")
+    lines.append("")
     lines.append(f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     lines.append(f"Total emails: {len(emails)}")
     lines.append("")
@@ -203,7 +196,7 @@ def print_summary(emails):
         print(f"\n  {icon} {cat} ({len(items)})")
         print(f"  {'-'*40}")
         if not items:
-            print(f"    (none)")
+            print("    (none)")
             continue
         for e in items:
             print(f"    {e['subject']}")
@@ -214,8 +207,9 @@ def print_summary(emails):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Classify unread emails into action categories")
-    parser.add_argument("--hours", type=int, default=None, help="Fetch emails from the last N hours")
+    parser = argparse.ArgumentParser(description="Classify emails into action categories")
+    parser.add_argument("--hours", type=int, default=24, help="Fetch emails from the last N hours (default: 24)")
+    parser.add_argument("--json", action="store_true", help="Output as JSON for agent processing")
     parser.add_argument("--save", action="store_true", help="Save output to email_actions.md")
     args = parser.parse_args()
 
@@ -228,7 +222,8 @@ def main():
         print("  export EMAIL_PASSWORD=\"your-app-password\"", file=sys.stderr)
         sys.exit(1)
 
-    print(f"Connecting to {IMAP_SERVER}...")
+    if not args.json:
+        print(f"Connecting to {IMAP_SERVER}...")
     try:
         emails = fetch_emails(email_addr, password, args.hours)
     except imaplib.IMAP4.error as e:
@@ -238,15 +233,22 @@ def main():
         sys.exit(1)
 
     if not emails:
+        if args.json:
+            print("[]")
+        else:
+            print("No emails found.")
         return
 
-    print_summary(emails)
+    if args.json:
+        print(json.dumps(emails, indent=2))
+    else:
+        print_summary(emails)
 
     if args.save:
         md = format_summary(emails)
         with open("email_actions.md", "w") as f:
             f.write(md)
-        print(f"Saved to email_actions.md")
+        print("Saved to email_actions.md")
 
 
 if __name__ == "__main__":

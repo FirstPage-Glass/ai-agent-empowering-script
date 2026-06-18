@@ -1,35 +1,38 @@
 ---
 name: email-planner
 description: >
-  Read and classify unread Gmail/Google Workspace emails into action categories
-  (URGENT, Action, Meeting, FYI). Use when the user wants to triage their inbox,
+  Read and classify Gmail/Google Workspace emails from the last 24 hours into
+  action categories (URGENT, Action, Meeting, FYI), spot items that need your
+  attention, and draft reply emails. Use when the user wants to triage their inbox,
   check unread emails, classify emails by priority, get an email action summary,
-  or mentions email planning, inbox management, or email organization.
+  draft email replies, or mentions email planning, inbox management, or
+  "what do I need to respond to".
 ---
 
 # Email Planner
 
-A skill that connects to a Gmail/Google Workspace inbox via IMAP, reads unread emails, and classifies them into action categories.
+A skill that connects to a Gmail/Google Workspace inbox, reads recent emails, spots anything that needs action, and drafts replies.
 
 ## How it works
 
 This skill bundles a pre-built Python script (`scripts/email_planner.py`) that:
 - Connects to `imap.gmail.com` over SSL (port 993)
-- Fetches unread emails (or emails from the last N hours)
+- Fetches emails from the last 24 hours (configurable with `--hours`)
 - Extracts: From, Subject, Date, Body
 - Classifies each email as: **URGENT**, **Action**, **Meeting**, or **FYI**
-- Prints a grouped summary to the terminal
-- Optionally saves the summary to `email_actions.md`
+- Outputs structured JSON for the agent to analyze
 
 The script uses only the Python standard library — no pip installs needed.
 
 ## Workflow
 
-### Step 1: Check environment variables
+### Phase 1: Fetch emails
 
-Before asking the user anything, check if `EMAIL` and `EMAIL_PASSWORD` are already set in the environment. If both are present, skip to Step 3 and run the script immediately.
+**Step 1: Check environment variables**
 
-### Step 2: Ask for credentials (only if needed)
+Before asking the user anything, check if `EMAIL` and `EMAIL_PASSWORD` are already set. If both are present, skip to running the script.
+
+**Step 2: Ask for credentials (only if needed)**
 
 Ask the user for their Gmail address and app password in a single prompt:
 
@@ -43,29 +46,100 @@ Ask the user for their Gmail address and app password in a single prompt:
 >
 > Paste them both below (e.g. `you@company.com xxxx xxxx xxxx xxxx`). Your password is never stored or logged.
 
-### Step 3: Run the script
+**Step 3: Run the script**
 
-Run the bundled script with the credentials as environment variables:
+Run the bundled script with `--json` to get structured data:
 
 ```bash
-EMAIL="user@example.com" EMAIL_PASSWORD="xxxxxxxxxxxxxxxx" python3 scripts/email_planner.py
+EMAIL="user@example.com" EMAIL_PASSWORD="xxxxxxxxxxxxxxxx" python3 scripts/email_planner.py --json --hours 24
 ```
 
-**Flags:**
-- `--hours N` — fetch emails from the last N hours instead of just unread
-- `--save` — also write the summary to `email_actions.md`
+If the user specified a different time range (e.g. "last 48 hours"), pass `--hours 48`.
 
-If the user asked to check recent emails (e.g. "last 24 hours"), pass `--hours 24`. If they asked to save the results, pass `--save`.
+Parse the JSON output. Each email object has: `from`, `subject`, `date`, `body`, `category`.
 
-### Step 4: Present results
+### Phase 2: Spot action items
 
-Show the user the terminal output. If they want to save it and `--save` wasn't used, offer to re-run with `--save`.
+Analyze the fetched emails and identify what needs the user's attention:
+
+1. **URGENT emails** — these always need a response or immediate action. For each one, determine:
+   - What specifically needs to be done
+   - Who needs a response
+   - Any deadlines or time pressure mentioned
+
+2. **Action emails** — review each one and determine:
+   - What the sender is asking for
+   - Whether a reply is needed or just a task to complete
+   - Any deadlines mentioned
+
+3. **Meeting emails** — check for:
+   - RSVPs needed
+   - Scheduling conflicts
+   - Prep materials mentioned
+
+4. **FYI emails** — scan briefly for anything actionable that the keyword classifier might have missed. If something looks important despite being classified as FYI, flag it.
+
+Skip categories that have zero emails — don't mention them.
+
+### Phase 3: Suggest actions and draft replies
+
+For each email that needs attention, present:
+
+1. **The email** — one-line summary (from + subject)
+2. **Suggested action** — what the user should do (e.g. "Reply confirming attendance", "Review the attached document by Friday")
+3. **Draft reply** — a ready-to-send email draft that the user can copy, edit, or send as-is
+
+Drafts should be:
+- Short and professional
+- Match the tone of the original email (formal → formal, casual → casual)
+- Address the specific ask in the email
+- Include placeholders in brackets for things the user needs to fill in (e.g. `[date]`, `[your answer]`)
+
+**Output format:**
+
+```
+📬 Found 12 emails in the last 24 hours.
+
+🔴 URGENT (1)
+
+  1. Server outage — ops@company.com
+     → Action: Reply confirming you're investigating
+     → Draft:
+       "Hi team, I'm on it. Investigating the root cause now
+        and will update within the hour."
+
+🟡 Action (2)
+
+  2. Q3 budget proposal — finance@company.com
+     → Action: Review the proposal and reply with feedback by [date]
+     → Draft:
+       "Hi, thanks for sending this over. I'll review the proposal
+        and get back to you with feedback by [date]."
+
+  3. Client follow-up — sales@company.com
+     → Action: Reply to confirm next steps
+     → Draft:
+       "Hi [name], thanks for the call earlier. To confirm, our
+        next steps are: [list steps]. Let me know if I missed anything."
+
+🔵 Meeting (1)
+
+  4. Team standup Tuesday — calendar@company.com
+     → Action: Confirm attendance (no reply needed if auto-accepted)
+
+⚪ FYI (8) — no action needed
+```
+
+After presenting the results, offer to:
+- Save all drafts to a file (`email_drafts.md`)
+- Adjust any draft's tone or content
+- Re-run with a different time range
 
 ## Error handling
 
 - **Login failed**: Tell the user to check their email and app password. Direct them to https://myaccount.google.com/apppasswords again.
-- **No emails found**: Let the user know there are no unread emails (or none in the time range). Offer to try `--hours` with a larger value.
-- **Missing env vars**: The script will print an error. Ask the user for credentials as in Step 2.
+- **No emails found**: Let the user know there are no emails in the last 24 hours. Offer to try `--hours` with a larger value.
+- **Missing env vars**: The script will print an error. Ask the user for credentials as in Phase 1 Step 2.
 
 ## Security
 

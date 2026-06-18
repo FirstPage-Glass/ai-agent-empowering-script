@@ -84,7 +84,13 @@ description: >
 
 ### 它做什麼
 
-**email-planner** 技能會連到你的 Gmail 信箱，把未讀郵件分成四類：
+**email-planner** 技能會做三件事：
+
+1. 📬 **抓取**最近 24 小時的郵件（可調整）
+2. 🔍 **找出**需要你處理的事項
+3. ✍️ **草擬**回覆郵件，讓你直接發送
+
+它會把郵件分成四類：
 
 | 分類 | 圖示 | 觸發條件 |
 |---|---|---|
@@ -95,10 +101,23 @@ description: >
 
 ### 怎麼用
 
-1. 📂 把 `skills/email-planner/` 資料夾放進你的專案
-2. 💬 告訴 agent：「幫我看看信箱」或「整理我的郵件」
-3. 📧 Agent 會問你的 email 和應用程式密碼
-4. ⚡ 它會執行內建腳本，顯示分類摘要
+這個技能在你執行安裝腳本時**自動安裝**。只要打開 opencode 然後說：
+
+```
+幫我看看信箱
+```
+
+或者：
+
+```
+哪些郵件需要我回覆？
+```
+
+Agent 會：
+1. 📧 問你的 email 和應用程式密碼（只需一次）
+2. ⚡ 抓取並分類你的郵件
+3. 🎯 找出需要處理的事項
+4. ✍️ 為每個待辦項目草擬回覆
 
 ### 取得應用程式密碼
 
@@ -114,34 +133,36 @@ description: >
 ### 輸出範例
 
 ```
-============================================================
-  Email Action Summary — 12 封郵件
-============================================================
+📬 找到 12 封郵件（最近 24 小時）。
 
-  🔴 緊急 (2)
-  ----------------------------------------
-    Server outage — immediate action needed
-      From: ops@company.com
-      Date: Mon, 16 Jun 2026 09:30:00 +0000
+🔴 緊急 (1)
 
-  🟡 待辦 (3)
-  ----------------------------------------
-    Please review the Q3 budget proposal
-      From: finance@company.com
-      Date: Mon, 16 Jun 2026 08:15:00 +0000
+  1. Server outage — ops@company.com
+     → 動作：回覆確認你正在處理
+     → 草稿：
+       "Hi team, I'm on it. Investigating the root cause now
+        and will update within the hour."
 
-  🔵 會議 (2)
-  ----------------------------------------
-    Team standup — Tuesday 10am
-      From: calendar@company.com
-      Date: Sun, 15 Jun 2026 18:00:00 +0000
+🟡 待辦 (2)
 
-  ⚪ 參考 (5)
-  ----------------------------------------
-    Weekly newsletter — AI trends
-      From: newsletter@techdigest.com
-      Date: Mon, 16 Jun 2026 06:00:00 +0000
-============================================================
+  2. Q3 budget proposal — finance@company.com
+     → 動作：審閱提案並在 [日期] 前回覆意見
+     → 草稿：
+       "Hi, thanks for sending this over. I'll review the proposal
+        and get back to you with feedback by [date]."
+
+  3. Client follow-up — sales@company.com
+     → 動作：回覆確認後續步驟
+     → 草稿：
+       "Hi [name], thanks for the call earlier. To confirm, our
+        next steps are: [list steps]. Let me know if I missed anything."
+
+🔵 會議 (1)
+
+  4. Team standup Tuesday — calendar@company.com
+     → 動作：確認出席（如果自動接受則不需回覆）
+
+⚪ 參考 (8) — 不需處理
 ```
 
 ---
@@ -222,21 +243,29 @@ Agent 會直接執行——不需要再產生程式碼。
 
 ## 技能放在哪裡 📁
 
-技能放在專案裡的 `skills/` 資料夾：
+**使用者範圍**（每個專案都能用）— 安裝腳本會放在這裡：
+
+```
+~/.config/opencode/skills/
+├── email-planner/
+│   ├── SKILL.md
+│   └── scripts/
+│       └── email_planner.py
+└── my-other-skill/
+    └── SKILL.md
+```
+
+**專案範圍**（只在該專案中可用）：
 
 ```
 my-project/
 ├── skills/
-│   ├── email-planner/
-│   │   ├── SKILL.md
-│   │   └── scripts/
-│   │       └── email_planner.py
-│   └── my-other-skill/
+│   └── my-skill/
 │       └── SKILL.md
 ├── src/
 └── ...
 ```
 
-當你打開專案時，agent 會自動發現 `skills/` 資料夾裡的技能。
+Agent 會自動發現兩個位置的技能。
 
-> 💡 **提示：** 你可以透過複製技能資料夾，或建立共用的 `skills/` 目錄並用 symlink 連結，來在多個專案間共用技能。
+> 💡 **提示：** 使用者範圍的技能適合你在哪裡都会用到的個人工具（像是 email planner）。專案範圍的技能比較適合專案特定的工作流程。
