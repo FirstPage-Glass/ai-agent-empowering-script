@@ -10,10 +10,12 @@ SKIP_CLEANUP="false"
 VERBOSE="false"
 
 CASKS=(visual-studio-code gcloud-cli opencode-desktop)
-CASK_APP_PATHS=("/Applications/Visual Studio Code.app" "" "")
+CASK_APP_PATHS=("/Applications/Visual Studio Code.app" "" "/Applications/OpenCode.app")
 FORMULAS=(opencode googleworkspace-cli node pnpm python rtk ripgrep fd jq yq tree bat gh shellcheck shfmt)
 DEAD_SYMLINKS=(/opt/homebrew/bin/code /opt/homebrew/bin/code-tunnel)
 VSCODE_EXTENSIONS=(sst-dev.opencode)
+
+die() { printf "${RED}✘ %b${NC}\n" "$*" >&2; exit 1; }
 
 for arg in "$@"; do
   case "$arg" in
@@ -34,8 +36,6 @@ EOF
   esac
 done
 
-die() { printf "${RED}✘ %b${NC}\n" "$*" >&2; exit 1; }
-
 STEP=0; TOTAL=0
 init_steps() { TOTAL="$1"; STEP=0; }
 next_step() {
@@ -46,12 +46,16 @@ ok_step() { printf " ${GREEN}✓${NC}\n"; }
 skip_step() { printf " ${YELLOW}−${NC} %s\n" "$1"; }
 
 run_quiet() {
+  if [[ "$VERBOSE" == "true" ]]; then
+    "$@"
+    return $?
+  fi
   local log; log="$(mktemp)"
   if "$@" >"$log" 2>&1; then
     rm -f "$log"; return 0
   else
     local rc=$?
-    [[ "$VERBOSE" == "true" ]] && cat "$log"
+    cat "$log"
     rm -f "$log"; return "$rc"
   fi
 }
@@ -122,7 +126,8 @@ remove_dead_symlinks() {
 }
 
 find_code_bin() {
-  if command -v code 2>/dev/null; then return 0; fi
+  local path
+  path="$(command -v code 2>/dev/null)" && { echo "$path"; return 0; }
   if [[ -x "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code" ]]; then
     echo "/Applications/Visual Studio Code.app/Contents/Resources/app/bin/code"
     return 0
@@ -142,6 +147,9 @@ verify_rtk() {
   local out
   if ! command -v rtk >/dev/null 2>&1; then return 0; fi
   out="$(rtk gain 2>&1)" || true
+  if [[ -n "$out" ]]; then
+    printf "  %-16s %s\n" "rtk gain" "$out"
+  fi
 }
 
 init_rtk() {
@@ -154,7 +162,12 @@ init_rtk() {
 print_version() {
   local label="$1"; shift
   local out
-  out="$("$@" 2>&1)" || true
+  out="$("$@" 2>&1 | head -1)" || true
+  if [[ -n "$out" ]]; then
+    printf "  %-16s %s\n" "$label" "$out"
+  else
+    printf "  %-16s ${YELLOW}not found${NC}\n" "$label"
+  fi
 }
 
 # ── Uninstall ──
