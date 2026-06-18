@@ -130,8 +130,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
 goto :eof
 
 :npm_step
-powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command pnpm -ea 0) { exit 0 }; $null = npm install -g pnpm 2>&1; exit 0"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command gws -ea 0) { exit 0 }; $null = npm install -g @googleworkspace/cli 2>&1; exit 0"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$env:Path=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine'); if (Get-Command pnpm -ea 0) { exit 0 }; $null = npm install -g pnpm 2>&1; exit 0"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$env:Path=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine'); if (Get-Command gws -ea 0) { exit 0 }; $null = npm install -g @googleworkspace/cli 2>&1; exit 0"
 goto :eof
 
 :vscode_step
@@ -143,6 +143,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
 goto :eof
 
 :verify_step
+for /f "tokens=2*" %%A in ('reg query "HKCU\Environment" /v Path 2^>nul') do set "UPATH=%%B"
+for /f "tokens=2*" %%A in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v Path 2^>nul') do set "SPATH=%%B"
+if defined UPATH set "PATH=!UPATH!;!SPATH!"
 set "TOOLS=code opencode gcloud node pnpm rg fd jq yq bat gh shellcheck shfmt rtk gws python pwsh"
 set "FAILED="
 set "RP=%RTK_DIR%"
