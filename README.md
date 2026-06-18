@@ -31,6 +31,14 @@ chmod +x install-dev-tools-macos.sh
 
 Download the repo and **double-click `install-dev-tools.cmd`**. That's it.
 
+### One line (PowerShell)
+
+Open a **normal (non-admin) PowerShell** and run:
+
+```powershell
+Invoke-WebRequest -Uri https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script/main/install-dev-tools.cmd -OutFile $env:TEMP\_install.cmd; & $env:TEMP\_install.cmd
+```
+
 The installer handles everything:
 - Installs Git, Node.js, Python, VS Code, opencode CLI via winget
 - Installs gcloud CLI, ripgrep, fd, bat, gh, shellcheck, shfmt and more via Scoop
