@@ -13,27 +13,35 @@ $BOLD = "$([char]0x1b)[1m"
 $NC = "$([char]0x1b)[0m"
 
 $MODE = if ($uninstall) { "uninstall" } else { "install" }
-$SKIP_CLEANUP = $false
 
 $WINGET_APPS = @(
   "OpenJS.NodeJS.LTS"
   "Python.Python.3.14"
   "Microsoft.PowerShell"
-  "pnpm.pnpm"
-  "SST.opencode"
-  "SST.OpenCodeDesktop"
-  "rtk-ai.rtk"
   "Microsoft.VisualStudioCode"
-  "Google.CloudSDK"
-  "Google.WorkspaceCLI"
-  "BurntSushi.ripgrep.MSVC"
-  "sharkdp.fd"
-  "jqlang.jq"
-  "MikeFarah.yq"
-  "sharkdp.bat"
-  "GitHub.cli"
-  "koalaman.shellcheck"
-  "mvdan.shfmt"
+  "SST.OpenCodeDesktop"
+)
+
+$NPM_PACKAGES = @(
+  "pnpm"
+  "opencode-ai"
+  "@googleworkspace/cli"
+  "rtk"
+)
+
+$SCOOP_PACKAGES = @(
+  "ripgrep"
+  "fd"
+  "jq"
+  "yq"
+  "bat"
+  "gh"
+  "shellcheck"
+  "shfmt"
+)
+
+$SCOOP_EXTRAS = @(
+  "gcloud"
 )
 
 $VSCODE_EXTENSION = "sst-dev.opencode"
@@ -48,6 +56,12 @@ $STEP = 0; $TOTAL = 0
 function InitSteps { param([int]$n); $script:STEP = 0; $script:TOTAL = $n }
 function NextStep { param([string]$label); $script:STEP += 1; Write-Host "${BLUE}[$($script:STEP)/$($script:TOTAL)]${NC} $label..." -NoNewline }
 function OkStep { Write-Host " ${GREEN}✓${NC}" }
+
+function RefreshPath {
+  $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
+  $userPath = [Environment]::GetEnvironmentVariable("Path", "User")
+  $env:Path = "$machinePath;$userPath"
+}
 
 function RunQuiet {
   param([scriptblock]$block)
@@ -68,7 +82,11 @@ function WingetInstall {
   $installed = & winget list --id "$id" --accept-source-agreements 2>$null
   if ($LASTEXITCODE -eq 0 -and $installed -match [regex]::Escape($id)) { return }
   if ($dryRun) { return }
-  RunQuiet { & winget install --id "$id" --silent --accept-package-agreements --accept-source-agreements }
+  try {
+    RunQuiet { & winget install --id "$id" --silent --accept-package-agreements --accept-source-agreements }
+  } catch {
+    Write-Host "`n${YELLOW}!  Failed to install $id${NC}"
+  }
 }
 
 function WingetUninstall {
@@ -76,7 +94,61 @@ function WingetUninstall {
   $installed = & winget list --id "$id" --accept-source-agreements 2>$null
   if ($LASTEXITCODE -ne 0 -or $installed -notmatch [regex]::Escape($id)) { return }
   if ($dryRun) { return }
-  RunQuiet { & winget uninstall --id "$id" --silent --accept-source-agreements }
+  try {
+    RunQuiet { & winget uninstall --id "$id" --silent --accept-source-agreements }
+  } catch {
+    Write-Host "`n${YELLOW}!  Failed to uninstall $id${NC}"
+  }
+}
+
+function NpmInstall {
+  param([string]$pkg)
+  $name = ($pkg -split '/')[0]
+  if ($name -eq "@googleworkspace") { $name = "gws" }
+  if (Get-Command $name -ErrorAction SilentlyContinue) { return }
+  if ($dryRun) { return }
+  try {
+    RunQuiet { & npm install -g "$pkg" }
+  } catch {
+    Write-Host "`n${YELLOW}!  Failed to install $pkg${NC}"
+  }
+}
+
+function NpmUninstall {
+  param([string]$pkg)
+  $name = ($pkg -split '/')[0]
+  if ($name -eq "@googleworkspace") { $name = "gws" }
+  if (-not (Get-Command $name -ErrorAction SilentlyContinue)) { return }
+  if ($dryRun) { return }
+  try {
+    RunQuiet { & npm uninstall -g "$pkg" }
+  } catch {
+    Write-Host "`n${YELLOW}!  Failed to uninstall $pkg${NC}"
+  }
+}
+
+function ScoopInstall {
+  param([string]$pkg)
+  $installed = & scoop list 2>$null
+  if ($installed -match "\b$pkg\b") { return }
+  if ($dryRun) { return }
+  try {
+    RunQuiet { & scoop install "$pkg" }
+  } catch {
+    Write-Host "`n${YELLOW}!  Failed to install $pkg${NC}"
+  }
+}
+
+function ScoopUninstall {
+  param([string]$pkg)
+  $installed = & scoop list 2>$null
+  if ($installed -notmatch "\b$pkg\b") { return }
+  if ($dryRun) { return }
+  try {
+    RunQuiet { & scoop uninstall "$pkg" }
+  } catch {
+    Write-Host "`n${YELLOW}!  Failed to uninstall $pkg${NC}"
+  }
 }
 
 function FindCodeCmd {
@@ -112,15 +184,30 @@ function InitRtk {
   RunQuiet { & rtk init -g --opencode }
 }
 
+function EnsureScoop {
+  if (Get-Command scoop -ErrorAction SilentlyContinue) { return }
+  if ($dryRun) { return }
+  Write-Host "`n${BLUE}==>${NC} Installing Scoop..."
+  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+  RunQuiet { & Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression }
+  RefreshPath
+  RunQuiet { & scoop bucket add extras }
+}
+
 # ── Auto-elevate ──
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+  $scriptPath = $PSCommandPath
+  if ([string]::IsNullOrEmpty($scriptPath)) {
+    $scriptPath = "$env:TEMP\install-dev-tools-windows.ps1"
+    $input | Set-Content -Path $scriptPath -Encoding UTF8
+  }
   $elevatedArgs = @()
   if ($uninstall) { $elevatedArgs += "-uninstall" }
   if ($yes) { $elevatedArgs += "-yes" }
   if ($dryRun) { $elevatedArgs += "-dryRun" }
   if ($verbose) { $elevatedArgs += "-verbose" }
   $shell = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { "pwsh.exe" } else { "powershell.exe" }
-  Start-Process -FilePath $shell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $($elevatedArgs -join ' ')" -Verb RunAs
+  Start-Process -FilePath $shell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" $($elevatedArgs -join ' ')" -Verb RunAs
   exit
 }
 
@@ -133,9 +220,18 @@ if ($MODE -eq "uninstall") {
   }
 
   Write-Host ""
-  InitSteps 2
-  NextStep "Uninstalling packages"
+  InitSteps 3
+  NextStep "Uninstalling winget packages"
   foreach ($app in $WINGET_APPS) { WingetUninstall $app }
+  OkStep
+
+  NextStep "Uninstalling npm packages"
+  foreach ($pkg in $NPM_PACKAGES) { NpmUninstall $pkg }
+  OkStep
+
+  NextStep "Uninstalling scoop packages"
+  foreach ($pkg in $SCOOP_PACKAGES) { ScoopUninstall $pkg }
+  foreach ($pkg in $SCOOP_EXTRAS) { ScoopUninstall $pkg }
   OkStep
 
   Write-Host ""
@@ -148,10 +244,26 @@ Write-Host ""
 Write-Host "${BOLD}Installing development tools...${NC}"
 Write-Host ""
 
-InitSteps 5
+InitSteps 6
 
-NextStep "Installing packages"
+NextStep "Installing winget packages (Node.js, Python, VS Code...)"
 foreach ($app in $WINGET_APPS) { WingetInstall $app }
+RefreshPath
+OkStep
+
+NextStep "Installing Scoop"
+EnsureScoop
+OkStep
+
+NextStep "Installing scoop packages (gcloud, ripgrep, fd, jq, gh...)"
+foreach ($pkg in $SCOOP_EXTRAS) { ScoopInstall $pkg }
+foreach ($pkg in $SCOOP_PACKAGES) { ScoopInstall $pkg }
+RefreshPath
+OkStep
+
+NextStep "Installing npm packages (pnpm, opencode, gws, rtk)"
+foreach ($pkg in $NPM_PACKAGES) { NpmInstall $pkg }
+RefreshPath
 OkStep
 
 NextStep "Installing VS Code extension"
@@ -161,11 +273,21 @@ OkStep
 NextStep "Verifying installations"
 if (-not $dryRun) {
   $tools = @("code", "opencode", "gcloud", "gws", "node", "pnpm", "rtk", "rg", "fd", "jq", "yq", "bat", "gh", "shellcheck", "shfmt", "pwsh", "python")
+  $failed = @()
   foreach ($tool in $tools) {
     $ver = & $tool --version 2>$null
-    if ($LASTEXITCODE -ne 0) { $ver = & $tool --help 2>$null; if ($LASTEXITCODE -ne 0) { $ver = "not found" } }
+    if ($LASTEXITCODE -ne 0) {
+      $ver = & $tool --help 2>$null
+      if ($LASTEXITCODE -ne 0) {
+        $failed += $tool
+      }
+    }
   }
   VerifyRtk
+  if ($failed.Count -gt 0) {
+    Write-Host "`n${YELLOW}!  These tools were not found: $($failed -join ', ')${NC}"
+    Write-Host "${YELLOW}   Open a new terminal window and try again.${NC}"
+  }
 }
 OkStep
 
