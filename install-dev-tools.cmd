@@ -16,10 +16,24 @@ set "RTK_DIR=%USERPROFILE%\.local\bin"
 set "STEP=0"
 set "TOTAL=9"
 
-set "ARGS=%*"
-for %%a in (%ARGS%) do set "MODE=%%a"
+rem Parse arguments — --quiet/-q suppresses output; pass "uninstall" to uninstall
+set "QUIET="
+for %%a in (%*) do (
+  if /i "%%a"=="--quiet" set "QUIET=1"
+  if /i "%%a"=="-q" set "QUIET=1"
+  if /i "%%a"=="uninstall" set "MODE=uninstall"
+)
 
-if "%MODE%"=="uninstall" goto :uninstall
+if defined MODE goto :uninstall
+
+rem Output redirection helpers for PowerShell commands
+if defined QUIET (
+  set "PS_REDIR=*>$null"
+  set "WINGET_SILENT=>nul 2>nul"
+) else (
+  set "PS_REDIR="
+  set "WINGET_SILENT="
+)
 
 echo.
 echo %W%AI Agent Dev Tools - Windows Installer%N%
@@ -93,14 +107,28 @@ call :winstall OpenJS.NodeJS.LTS
 call :winstall Python.Python.3.14
 call :winstall Microsoft.PowerShell
 call :winstall Microsoft.VisualStudioCode
-call :winstall SST.opencode
+call :install_opencode_ext
 goto :eof
 
 :winstall
-winget list --id "%~1" --accept-source-agreements >nul 2>nul
+winget list --id "%~1" --accept-source-agreements !WINGET_SILENT!
 if %errorlevel% equ 0 exit /b 0
-winget install --id "%~1" --silent --accept-package-agreements --accept-source-agreements >nul 2>nul
+winget install --id "%~1" --silent --accept-package-agreements --accept-source-agreements !WINGET_SILENT!
 exit /b 0
+
+:install_opencode_ext
+rem Install OpenCode VS Code extension from GitHub releases instead of winget
+rem Winget SST.opencode is unreliable; use the VS Code extension directly
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$c = @(^
+    '%LOCALAPPDATA%\Programs\Microsoft VS Code\bin\code.cmd',^
+    '%ProgramFiles%\Microsoft VS Code\bin\code.cmd',^
+    '%ProgramFiles(x86)%\Microsoft VS Code\bin\code.cmd'^
+  ) |? { Test-Path $_ } | select -First 1;" ^
+  "if (-not $c) { exit 0 }; " ^
+  "if (@(& $c --list-extensions 2>$null) -contains 'sst-dev.opencode') { exit 0 }; " ^
+  "& $c --install-extension sst-dev.opencode !PS_REDIR!; exit 0"
+goto :eof
 
 :scoop_step
 powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command scoop -ea 0) { exit 0 }; Invoke-Expression (Invoke-RestMethod https://get.scoop.sh); exit 0"
@@ -113,7 +141,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "scoop bucket list | findstr extras | Out-Null;" ^
   "if ($LASTEXITCODE -ne 0) { scoop bucket add extras }"
 for %%p in (gcloud ripgrep fd jq yq bat gh shellcheck shfmt) do (
-  pwsh -NoProfile -ExecutionPolicy Bypass -Command "$env:Path=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine'); if (Get-Command %%p -ea 0) { exit 0 }; $null = scoop install %%p 2>&1; exit 0"
+  pwsh -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command %%p -ea 0) { exit 0 }; scoop install --no-hash-check %%p !PS_REDIR!; exit 0"
 )
 goto :eof
 
@@ -130,22 +158,33 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
 goto :eof
 
 :npm_step
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$env:Path=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine'); if (Get-Command pnpm -ea 0) { exit 0 }; $null = npm install -g pnpm 2>&1; exit 0"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "$env:Path=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine'); if (Get-Command gws -ea 0) { exit 0 }; $null = npm install -g @googleworkspace/cli 2>&1; exit 0"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command pnpm -ea 0) { exit 0 }; npm install -g pnpm !PS_REDIR!; exit 0"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command gws -ea 0) { exit 0 }; npm install -g @googleworkspace/cli !PS_REDIR!; exit 0"
 goto :eof
 
 :vscode_step
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$c = @('%LOCALAPPDATA%\Programs\Microsoft VS Code\bin\code.cmd','%ProgramFiles%\Microsoft VS Code\bin\code.cmd','%ProgramFiles(x86)%\Microsoft VS Code\bin\code.cmd') |? { Test-Path $_ } | select -First 1;" ^
-  "if (-not $c) { exit 0 };" ^
-  "if (@(& $c --list-extensions 2>$null) -contains 'sst-dev.opencode') { exit 0 };" ^
-  "$null = & $c --install-extension sst-dev.opencode 2>&1; exit 0"
+  "$c = @(^
+    '%LOCALAPPDATA%\Programs\Microsoft VS Code\bin\code.cmd',^
+    '%ProgramFiles%\Microsoft VS Code\bin\code.cmd',^
+    '%ProgramFiles(x86)%\Microsoft VS Code\bin\code.cmd'^
+  ) |? { Test-Path $_ } | select -First 1;" ^
+  "if (-not $c) { exit 0 }; " ^
+  "if (@(& $c --list-extensions 2>$null) -contains 'sst-dev.opencode') { exit 0 }; " ^
+  "& $c --install-extension sst-dev.opencode !PS_REDIR!; exit 0"
 goto :eof
 
 :verify_step
 for /f "tokens=2*" %%A in ('reg query "HKCU\Environment" /v Path 2^>nul') do set "UPATH=%%B"
 for /f "tokens=2*" %%A in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v Path 2^>nul') do set "SPATH=%%B"
-if defined UPATH set "PATH=!UPATH!;!SPATH!"
+rem Append registry paths to current PATH instead of overriding (so install-time additions are preserved)
+if defined UPATH if defined SPATH (
+  set "PATH=!UPATH!;!SPATH!;!PATH!"
+) else if defined UPATH (
+  set "PATH=!UPATH!;!PATH!"
+) else if defined SPATH (
+  set "PATH=!SPATH!;!PATH!"
+)
 set "TOOLS=code opencode gcloud node pnpm rg fd jq yq bat gh shellcheck shfmt rtk gws python pwsh"
 set "FAILED="
 set "RP=%RTK_DIR%"
@@ -162,7 +201,7 @@ goto :eof
 
 :configure_step
 if not exist "%RTK_DIR%\rtk.exe" exit /b 0
-powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $null = & '%RTK_DIR%\rtk.exe' init -g --opencode 2>&1 } catch { }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "try { & '%RTK_DIR%\rtk.exe' init -g --opencode !PS_REDIR! } catch { }"
 goto :eof
 
 :install_skills
@@ -200,8 +239,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "if (-not (Test-Path $c)) { exit 0 };" ^
   "$o = Get-Content $c -Raw | ConvertFrom-Json;" ^
   "if ($o.skills -and $o.skills.paths) { $o.skills.paths = @($o.skills.paths | Where-Object { $_ -ne $p }) };" ^
-   "if ($o.skills -and $o.skills.paths -and @($o.skills.paths).Count -eq 0) { $o.skills.PSObject.Properties.Remove('paths') };" ^
-   "if ($o.skills -and $o.skills.PSObject.Properties.Count -eq 0) { $o.PSObject.Properties.Remove('skills') };" ^
+  "if ($o.skills -and $o.skills.paths -and @($o.skills.paths).Count -eq 0) { $o.skills.PSObject.Properties.Remove('paths') };" ^
+  "if ($o.skills -and $o.skills.PSObject.Properties.Count -eq 0) { $o.PSObject.Properties.Remove('skills') };" ^
   "$o | ConvertTo-Json -Depth 3 | Set-Content $c -Encoding UTF8"
 goto :eof
 
@@ -211,13 +250,13 @@ echo.
 echo %W%Uninstalling tools...%N%
 echo.
 call :step "Uninstalling npm packages"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "@('pnpm','@googleworkspace/cli') | %% { $null = npm uninstall -g $_ 2>&1 }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "@('pnpm','@googleworkspace/cli') | %% { npm uninstall -g $_ !PS_REDIR! }"
 call :ok
 call :step "Uninstalling Scoop packages"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "@('gcloud','ripgrep','fd','jq','yq','bat','gh','shellcheck','shfmt') | %% { $null = scoop uninstall $_ 2>&1 }"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "@('gcloud','ripgrep','fd','jq','yq','bat','gh','shellcheck','shfmt') | %% { scoop uninstall $_ !PS_REDIR! }"
 call :ok
 call :step "Uninstalling winget packages"
-for %%p in (SST.opencode Google.CloudSDK) do winget uninstall --id %%p --silent --accept-source-agreements >nul 2>nul
+for %%p in (Google.CloudSDK) do winget uninstall --id %%p --silent --accept-source-agreements !WINGET_SILENT!
 call :ok
 call :step "Removing rtk"
 if exist "%RTK_DIR%\rtk.exe" del "%RTK_DIR%\rtk.exe"
