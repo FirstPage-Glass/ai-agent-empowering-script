@@ -120,3 +120,19 @@ Research the company TechFlow Solutions:
 > ⚠️ OpenCode can search the web, but we recommend verifying the accuracy of information yourself.
 
 > 📂 **Try this example:** [`examples/competitor-brief.md`](examples/competitor-brief.md) — a competitor profile, try having OpenCode do deeper research.
+
+---
+
+## Scenario 8: Checking Inbox 📬
+
+**You say:**
+```
+check my inbox
+```
+
+**OpenCode will:**
+- ✅ Fetch your unread emails from the last 24 hours
+- ✅ Classify them by priority (URGENT, Action, Meeting, FYI)
+- ✅ Spot action items and draft replies for each
+
+> ⚠️ This skill requires a Gmail app password. See [Part 9: Skills](09-skills.md#getting-an-app-password) for setup instructions.

@@ -120,3 +120,19 @@
 > ⚠️ OpenCode 可以上網搜尋資料，但建議你還是要自己驗證資訊的正確性。
 
 > 📂 **試試這個範例：** [`examples/competitor-brief.md`](examples/competitor-brief.md) — 一間公司的基本資料，試試讓 OpenCode 幫你深入研究。
+
+---
+
+## 場景八：查看信箱 📬
+
+**你對它說：**
+```
+check my inbox
+```
+
+**OpenCode 會做：**
+- ✅ 抓取過去 24 小時的未讀 email
+- ✅ 按優先級分類（URGENT、Action、Meeting、FYI）
+- ✅ 找出待辦項目並為每個草擬回覆
+
+> ⚠️ 這個技能需要 Gmail 應用程式密碼。設定方法請看 [Part 9：技能](09-skills.md#取得應用程式密碼)。

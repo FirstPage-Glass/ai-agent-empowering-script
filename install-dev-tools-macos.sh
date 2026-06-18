@@ -15,6 +15,11 @@ FORMULAS=(opencode googleworkspace-cli node pnpm python rtk ripgrep fd jq yq tre
 DEAD_SYMLINKS=(/opt/homebrew/bin/code /opt/homebrew/bin/code-tunnel)
 VSCODE_EXTENSIONS=(sst-dev.opencode)
 
+SKILLS_DIR="$HOME/.config/opencode/skills"
+OPENCODE_CONFIG="$HOME/.config/opencode/opencode.jsonc"
+SKILL_BASE_URL="https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script/main/skills"
+SKILLS=(email-planner)
+
 die() { printf "${RED}✘ %b${NC}\n" "$*" >&2; exit 1; }
 
 for arg in "$@"; do
@@ -147,6 +152,72 @@ init_rtk() {
   run_quiet rtk init -g --opencode
 }
 
+install_skills() {
+  if [[ "$DRY_RUN" == "true" ]]; then return 0; fi
+  local skill
+  for skill in "${SKILLS[@]}"; do
+    local dest="$SKILLS_DIR/$skill"
+    mkdir -p "$dest/scripts"
+    curl -fsSL "$SKILL_BASE_URL/$skill/SKILL.md" -o "$dest/SKILL.md"
+    curl -fsSL "$SKILL_BASE_URL/$skill/scripts/email_planner.py" -o "$dest/scripts/email_planner.py"
+  done
+  update_opencode_config
+}
+
+strip_jsonc() {
+  sed -E 's|//[^\"]*$||g; s|/\*[^*]*\*/||g' "$1" | sed '/^[[:space:]]*$/d'
+}
+
+update_opencode_config() {
+  local config_dir
+  config_dir="$(dirname "$OPENCODE_CONFIG")"
+  mkdir -p "$config_dir"
+  if [[ ! -f "$OPENCODE_CONFIG" ]]; then
+    cat > "$OPENCODE_CONFIG" <<'JSONCEOF'
+{
+  "$schema": "https://opencode.ai/config.json",
+  "skills": {
+    "paths": ["~/.config/opencode/skills"]
+  }
+}
+JSONCEOF
+    return 0
+  fi
+  local tmp; tmp="$(mktemp)"
+  local stripped; stripped="$(mktemp)"
+  strip_jsonc "$OPENCODE_CONFIG" > "$stripped"
+  if jq -e '.skills.paths // [] | index("~/.config/opencode/skills")' "$stripped" >/dev/null 2>&1; then
+    rm -f "$tmp" "$stripped"
+    return 0
+  fi
+  if jq -e '.skills' "$stripped" >/dev/null 2>&1; then
+    jq '.skills.paths = ((.skills.paths // []) + ["~/.config/opencode/skills"] | unique)' "$stripped" > "$tmp"
+  else
+    jq '. + {"skills": {"paths": ["~/.config/opencode/skills"]}}' "$stripped" > "$tmp"
+  fi
+  mv "$tmp" "$OPENCODE_CONFIG"
+  rm -f "$stripped"
+}
+
+uninstall_skills() {
+  if [[ "$DRY_RUN" == "true" ]]; then return 0; fi
+  local skill
+  for skill in "${SKILLS[@]}"; do
+    rm -rf "$SKILLS_DIR/$skill"
+  done
+  if [[ -d "$SKILLS_DIR" ]] && [[ -z "$(ls -A "$SKILLS_DIR" 2>/dev/null)" ]]; then
+    rmdir "$SKILLS_DIR" 2>/dev/null || true
+  fi
+  if [[ -f "$OPENCODE_CONFIG" ]]; then
+    local tmp; tmp="$(mktemp)"
+    local stripped; stripped="$(mktemp)"
+    strip_jsonc "$OPENCODE_CONFIG" > "$stripped"
+    jq 'if .skills.paths then .skills.paths = (.skills.paths | map(select(. != "~/.config/opencode/skills"))) | if .skills.paths == [] then del(.skills.paths) else . end else . end | if .skills == {} then del(.skills) else . end' "$stripped" > "$tmp"
+    mv "$tmp" "$OPENCODE_CONFIG"
+    rm -f "$stripped"
+  fi
+}
+
 print_version() {
   local label="$1"; shift
   local out
@@ -167,10 +238,14 @@ if [[ "$MODE" == "uninstall" ]]; then
   fi
 
   echo ""
-  init_steps 2
+  init_steps 3
   next_step "Uninstalling packages"
   for ((i=0; i<${#CASKS[@]}; i++)); do brew_uninstall "${CASKS[$i]}" "${CASK_APP_PATHS[$i]}"; done
   for f in "${FORMULAS[@]}"; do brew_uninstall_formula "$f"; done
+  ok_step
+
+  next_step "Uninstalling skills"
+  uninstall_skills
   ok_step
 
   if [[ "$SKIP_CLEANUP" != "true" ]]; then
@@ -189,7 +264,7 @@ echo ""
 echo "${BOLD}Installing development tools...${NC}"
 echo ""
 
-init_steps 5
+init_steps 6
 
 next_step "Installing packages"
 remove_dead_symlinks
@@ -224,6 +299,10 @@ ok_step
 
 next_step "Configuring tools"
 [[ "$DRY_RUN" != "true" ]] && init_rtk
+ok_step
+
+next_step "Installing skills"
+install_skills
 ok_step
 
 echo ""
