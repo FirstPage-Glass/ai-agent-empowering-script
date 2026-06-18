@@ -1,8 +1,8 @@
-param(
+﻿param(
   [switch]$uninstall,
   [switch]$yes,
   [switch]$dryRun,
-  [switch]$verbose
+  [switch]$wingetOnly
 )
 
 $GREEN = "$([char]0x1b)[1;32m"
@@ -48,14 +48,14 @@ $VSCODE_EXTENSION = "sst-dev.opencode"
 
 function Die {
   param([string]$msg)
-  Write-Host "${RED}✘ $msg${NC}"
+  Write-Host "${RED}X $msg${NC}"
   exit 1
 }
 
 $STEP = 0; $TOTAL = 0
 function InitSteps { param([int]$n); $script:STEP = 0; $script:TOTAL = $n }
 function NextStep { param([string]$label); $script:STEP += 1; Write-Host "${BLUE}[$($script:STEP)/$($script:TOTAL)]${NC} $label..." -NoNewline }
-function OkStep { Write-Host " ${GREEN}✓${NC}" }
+function OkStep { Write-Host " ${GREEN}OK${NC}" }
 
 function RefreshPath {
   $machinePath = [Environment]::GetEnvironmentVariable("Path", "Machine")
@@ -63,18 +63,10 @@ function RefreshPath {
   $env:Path = "$machinePath;$userPath"
 }
 
-function RunQuiet {
+function Run {
   param([scriptblock]$block)
-  if ($verbose) {
-    & $block
-    if ($LASTEXITCODE -ne 0) { throw "Command failed with exit code $LASTEXITCODE" }
-  } else {
-    $output = & $block 2>&1
-    if ($LASTEXITCODE -ne 0) {
-      Write-Host "`n${RED}$output${NC}" -ForegroundColor Red
-      throw "Command failed with exit code $LASTEXITCODE"
-    }
-  }
+  & $block
+  if ($LASTEXITCODE -ne 0) { throw "Command failed with exit code $LASTEXITCODE" }
 }
 
 function WingetInstall {
@@ -83,7 +75,7 @@ function WingetInstall {
   if ($LASTEXITCODE -eq 0 -and $installed -match [regex]::Escape($id)) { return }
   if ($dryRun) { return }
   try {
-    RunQuiet { & winget install --id "$id" --silent --accept-package-agreements --accept-source-agreements }
+    Run {& winget install --id "$id" --silent --accept-package-agreements --accept-source-agreements }
   } catch {
     Write-Host "`n${YELLOW}!  Failed to install $id${NC}"
   }
@@ -95,7 +87,7 @@ function WingetUninstall {
   if ($LASTEXITCODE -ne 0 -or $installed -notmatch [regex]::Escape($id)) { return }
   if ($dryRun) { return }
   try {
-    RunQuiet { & winget uninstall --id "$id" --silent --accept-source-agreements }
+    Run {& winget uninstall --id "$id" --silent --accept-source-agreements }
   } catch {
     Write-Host "`n${YELLOW}!  Failed to uninstall $id${NC}"
   }
@@ -108,7 +100,7 @@ function NpmInstall {
   if (Get-Command $name -ErrorAction SilentlyContinue) { return }
   if ($dryRun) { return }
   try {
-    RunQuiet { & npm install -g "$pkg" }
+    Run {& npm install -g "$pkg" }
   } catch {
     Write-Host "`n${YELLOW}!  Failed to install $pkg${NC}"
   }
@@ -121,7 +113,7 @@ function NpmUninstall {
   if (-not (Get-Command $name -ErrorAction SilentlyContinue)) { return }
   if ($dryRun) { return }
   try {
-    RunQuiet { & npm uninstall -g "$pkg" }
+    Run {& npm uninstall -g "$pkg" }
   } catch {
     Write-Host "`n${YELLOW}!  Failed to uninstall $pkg${NC}"
   }
@@ -129,11 +121,12 @@ function NpmUninstall {
 
 function ScoopInstall {
   param([string]$pkg)
+  if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) { return }
   $installed = & scoop list 2>$null
   if ($installed -match "\b$pkg\b") { return }
   if ($dryRun) { return }
   try {
-    RunQuiet { & scoop install "$pkg" }
+    Run {& scoop install "$pkg" }
   } catch {
     Write-Host "`n${YELLOW}!  Failed to install $pkg${NC}"
   }
@@ -141,11 +134,12 @@ function ScoopInstall {
 
 function ScoopUninstall {
   param([string]$pkg)
+  if (-not (Get-Command scoop -ErrorAction SilentlyContinue)) { return }
   $installed = & scoop list 2>$null
   if ($installed -notmatch "\b$pkg\b") { return }
   if ($dryRun) { return }
   try {
-    RunQuiet { & scoop uninstall "$pkg" }
+    Run {& scoop uninstall "$pkg" }
   } catch {
     Write-Host "`n${YELLOW}!  Failed to uninstall $pkg${NC}"
   }
@@ -168,7 +162,7 @@ function InstallVSCodeExtension {
   $list = & $code --list-extensions 2>$null
   if ($list -contains $ext) { return }
   if ($dryRun) { return }
-  RunQuiet { & $code --install-extension $ext }
+  Run { & $code --install-extension $ext }
 }
 
 function VerifyRtk {
@@ -181,37 +175,66 @@ function InitRtk {
   if ($dryRun) { return }
   $show = & rtk init --show 2>$null
   if ($show -match "opencode") { return }
-  RunQuiet { & rtk init -g --opencode }
+  Run { & rtk init -g --opencode }
 }
 
 function EnsureScoop {
   if (Get-Command scoop -ErrorAction SilentlyContinue) { return }
   if ($dryRun) { return }
   Write-Host "`n${BLUE}==>${NC} Installing Scoop..."
-  Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
-  RunQuiet { & Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression }
-  RefreshPath
-  RunQuiet { & scoop bucket add extras }
-}
-
-# ── Auto-elevate ──
-if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-  $scriptPath = $PSCommandPath
-  if ([string]::IsNullOrEmpty($scriptPath)) {
-    $scriptPath = "$env:TEMP\install-dev-tools-windows.ps1"
-    $input | Set-Content -Path $scriptPath -Encoding UTF8
+  try {
+    if (IsAdmin) {
+      # Scoop blocks elevated installs unless explicitly allowed.
+      $installer = "$env:TEMP\scoop-install.ps1"
+      Invoke-RestMethod -Uri https://get.scoop.sh -OutFile $installer
+      & $installer -RunAsAdmin
+    } else {
+      Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+    }
+    RefreshPath
+    & scoop bucket add extras
+  } catch {
+    Write-Host "`n${YELLOW}!  Failed to install Scoop: $_${NC}"
   }
-  $elevatedArgs = @()
-  if ($uninstall) { $elevatedArgs += "-uninstall" }
-  if ($yes) { $elevatedArgs += "-yes" }
-  if ($dryRun) { $elevatedArgs += "-dryRun" }
-  if ($verbose) { $elevatedArgs += "-verbose" }
-  $shell = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { "pwsh.exe" } else { "powershell.exe" }
-  Start-Process -FilePath $shell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" $($elevatedArgs -join ' ')" -Verb RunAs
-  exit
 }
 
-# ── Uninstall ──
+function IsAdmin {
+  return ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")
+}
+
+# Run the winget batch with admin rights without elevating the whole script
+# (Scoop refuses to run as admin, so only this step is elevated).
+function InvokeWingetBatch {
+  param([string]$mode)  # "install" or "uninstall"
+  if ($dryRun) { return }
+
+  # Already elevated, or no script file to re-launch (irm | iex): run in place.
+  # winget will raise its own per-package UAC prompt when a package needs it.
+  if ((IsAdmin) -or [string]::IsNullOrEmpty($PSCommandPath)) {
+    if ($mode -eq "uninstall") { foreach ($app in $WINGET_APPS) { WingetUninstall $app } }
+    else { foreach ($app in $WINGET_APPS) { WingetInstall $app } }
+    return
+  }
+
+  # Normal user: elevate a short-lived child that only does the winget step.
+  $childArgs = @("-wingetOnly")
+  if ($mode -eq "uninstall") { $childArgs += "-uninstall" }
+  $shell = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { "pwsh.exe" } else { "powershell.exe" }
+  try {
+    Start-Process -FilePath $shell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`" $($childArgs -join ' ')" -Verb RunAs -Wait
+  } catch {
+    Write-Host "`n${YELLOW}!  Elevation was cancelled; winget packages may not be installed.${NC}"
+  }
+}
+
+# == Winget-only sub-step (invoked elevated by InvokeWingetBatch) ==
+if ($wingetOnly) {
+  if ($MODE -eq "uninstall") { foreach ($app in $WINGET_APPS) { WingetUninstall $app } }
+  else { foreach ($app in $WINGET_APPS) { WingetInstall $app } }
+  exit 0
+}
+
+# == Uninstall ==
 if ($MODE -eq "uninstall") {
   if (-not $yes -and -not $dryRun) {
     Write-Host "${YELLOW}!  Uninstall VS Code, opencode, gcloud-cli, and other tools? Type 'yes' to continue: ${NC}" -NoNewline
@@ -222,7 +245,7 @@ if ($MODE -eq "uninstall") {
   Write-Host ""
   InitSteps 3
   NextStep "Uninstalling winget packages"
-  foreach ($app in $WINGET_APPS) { WingetUninstall $app }
+  InvokeWingetBatch "uninstall"
   OkStep
 
   NextStep "Uninstalling npm packages"
@@ -239,15 +262,15 @@ if ($MODE -eq "uninstall") {
   exit 0
 }
 
-# ── Install ──
+# == Install ==
 Write-Host ""
 Write-Host "${BOLD}Installing development tools...${NC}"
 Write-Host ""
 
-InitSteps 6
+InitSteps 7
 
 NextStep "Installing winget packages (Node.js, Python, VS Code...)"
-foreach ($app in $WINGET_APPS) { WingetInstall $app }
+InvokeWingetBatch "install"
 RefreshPath
 OkStep
 

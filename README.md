@@ -27,24 +27,40 @@ chmod +x install-dev-tools-macos.sh
 
 ## Windows
 
-Open **PowerShell as Administrator** and run:
+### One click (recommended)
+
+Download the repo and **double-click `install-dev-tools-windows.cmd`**. That's it — approve the single UAC prompt for the winget step and walk away. The launcher bypasses PowerShell's execution policy, removes the "downloaded from internet" block, and runs the installer for you.
+
+> **Do not "Run as administrator".** Just double-click. The installer runs as your normal user and elevates *only* the winget step (one UAC prompt), because Scoop refuses to install under an administrator account. Running the whole thing elevated is unnecessary and works against Scoop.
+
+> **Tip:** To avoid the one-time "Open File – Security Warning" dialog entirely, get the files with `git clone` instead of downloading a ZIP — git-cloned files are never tagged as downloaded.
+>
+> ```powershell
+> git clone https://github.com/FirstPage-Glass/ai-agent-empowering-script.git
+> cd ai-agent-empowering-script
+> ```
+
+### One line (PowerShell)
+
+Or open a **normal (non-admin) PowerShell** and run:
+
+```powershell
+irm https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script/main/install-dev-tools-windows.ps1 | iex
+```
+
+### Manual
+
+If you already have the `.ps1` locally, open a **normal (non-admin) PowerShell** and run:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\install-dev-tools-windows.ps1
 ```
 
-Or download and run directly:
-
-```powershell
-irm https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script/main/install-dev-tools-windows.ps1 | iex
-```
-
 ### Flags
 
 | Flag | Description |
 |---|---|
-| `-verbose` | Show detailed winget output |
 | `-dryRun` | Preview without installing |
 | `-yes` | Skip confirmation prompts |
 | `-uninstall` | Remove all installed tools |
