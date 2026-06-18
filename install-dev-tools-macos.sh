@@ -29,7 +29,6 @@ for arg in "$@"; do
 Usage: install-dev-tools-macos.sh [uninstall|--uninstall|remove] [-y|--yes] [--dry-run] [--no-cleanup] [--verbose]
 
 Without arguments, installs development tools.
-Use --verbose to show detailed brew output.
 EOF
       exit 0 ;;
     *) die "Unknown argument: $arg" ;;
@@ -46,18 +45,7 @@ ok_step() { printf " ${GREEN}✓${NC}\n"; }
 skip_step() { printf " ${YELLOW}−${NC} %s\n" "$1"; }
 
 run_quiet() {
-  if [[ "$VERBOSE" == "true" ]]; then
-    "$@"
-    return $?
-  fi
-  local log; log="$(mktemp)"
-  if "$@" >"$log" 2>&1; then
-    rm -f "$log"; return 0
-  else
-    local rc=$?
-    cat "$log"
-    rm -f "$log"; return "$rc"
-  fi
+  "$@"
 }
 
 if [[ "$(uname -s)" != "Darwin" ]]; then
