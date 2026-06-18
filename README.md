@@ -4,6 +4,8 @@ One-command setup for macOS and Windows development environments, optimized for 
 
 ## macOS
 
+No Homebrew or sudo required. Installs to `~/.local/bin`.
+
 ```bash
 bash <(curl -fsSL https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script/main/install-dev-tools-macos.sh) --yes
 ```
@@ -19,10 +21,9 @@ chmod +x install-dev-tools-macos.sh
 
 | Flag | Description |
 |---|---|
-| `--verbose` | Show detailed brew output |
+| `--verbose` | Show detailed download/install output |
 | `--dry-run` | Preview without installing |
 | `--yes` | Skip confirmation prompts |
-| `--no-cleanup` | Skip brew autoremove/cleanup |
 | `uninstall` | Remove all installed tools |
 
 ## Windows
@@ -63,25 +64,24 @@ The installer handles everything:
 
 | Tool | macOS | Windows | Purpose |
 |---|---|---|---|
-| opencode CLI | brew formula | winget (SST.opencode) | AI coding agent (TUI) |
-| opencode Desktop | brew cask | winget (SST.OpenCodeDesktop) | Desktop app for opencode |
-| VS Code | brew cask | winget | Code editor |
-| gcloud CLI | brew cask | scoop (extras) | Google Cloud CLI |
-| gws CLI | brew formula | npm | Google Workspace CLI |
-| Node.js (LTS) | brew formula | winget | JavaScript runtime |
-| pnpm | brew formula | npm | Fast package manager |
-| rtk | brew formula | GitHub release | LLM token proxy (Rust) |
-| ripgrep | brew formula | scoop | Code search |
-| fd | brew formula | scoop | File search |
-| jq | brew formula | scoop | JSON processor |
-| yq | brew formula | scoop | YAML processor |
-| bat | brew formula | scoop | File viewer with syntax |
-| gh | brew formula | scoop | GitHub CLI |
-| shellcheck | brew formula | scoop | Shell script linter |
-| shfmt | brew formula | scoop | Shell formatter |
-| tree | brew formula | built-in | Directory tree |
+| opencode CLI | curl | winget (SST.opencode) | AI coding agent (TUI) |
+| opencode Desktop | — | winget (SST.OpenCodeDesktop) | Desktop app for opencode |
+| VS Code | zip download | winget | Code editor |
+| gcloud CLI | tarball | scoop (extras) | Google Cloud CLI |
+| gws CLI | npm | npm | Google Workspace CLI |
+| Node.js (LTS) | nvm (curl) | winget | JavaScript runtime |
+| pnpm | npm | npm | Fast package manager |
+| rtk | npm | GitHub release | LLM token proxy (Rust) |
+| ripgrep | GitHub release | scoop | Code search |
+| fd | GitHub release | scoop | File search |
+| jq | GitHub release | scoop | JSON processor |
+| yq | GitHub release | scoop | YAML processor |
+| bat | GitHub release | scoop | File viewer with syntax |
+| gh | GitHub release | scoop | GitHub CLI |
+| shellcheck | GitHub release | scoop | Shell script linter |
+| shfmt | GitHub release | scoop | Shell formatter |
 | PowerShell 7 | — | winget | Cross-platform shell |
-| Python 3 | brew formula | winget | Python runtime |
+| Python 3 | — | winget | Python runtime |
 
 ## After install
 
