@@ -5,7 +5,7 @@ One-command setup for macOS and Windows development environments, optimized for 
 ## macOS
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script/main/install-dev-tools-macos.sh | bash
+bash <(curl -fsSL https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script/main/install-dev-tools-macos.sh) --yes
 ```
 
 Or download and run:
@@ -53,22 +53,22 @@ irm https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script
 
 | Tool | macOS | Windows | Purpose |
 |---|---|---|---|
-| opencode | brew cask | winget | AI coding agent |
+| opencode | brew formula | npm | AI coding agent |
 | opencode Desktop | brew cask | winget | Desktop app for opencode |
 | VS Code | brew cask | winget | Code editor |
-| gcloud CLI | brew cask | winget | Google Cloud CLI |
-| gws CLI | brew formula | winget | Google Workspace CLI |
+| gcloud CLI | brew cask | scoop | Google Cloud CLI |
+| gws CLI | brew formula | npm | Google Workspace CLI |
 | Node.js (LTS) | brew formula | winget | JavaScript runtime |
-| pnpm | brew formula | winget | Fast package manager |
-| rtk | brew formula | winget | LLM token proxy |
-| ripgrep | brew formula | winget | Code search |
-| fd | brew formula | winget | File search |
-| jq | brew formula | winget | JSON processor |
-| yq | brew formula | winget | YAML processor |
-| bat | brew formula | winget | File viewer with syntax |
-| gh | brew formula | winget | GitHub CLI |
-| shellcheck | brew formula | winget | Shell script linter |
-| shfmt | brew formula | winget | Shell formatter |
+| pnpm | brew formula | npm | Fast package manager |
+| rtk | brew formula | npm | LLM token proxy |
+| ripgrep | brew formula | scoop | Code search |
+| fd | brew formula | scoop | File search |
+| jq | brew formula | scoop | JSON processor |
+| yq | brew formula | scoop | YAML processor |
+| bat | brew formula | scoop | File viewer with syntax |
+| gh | brew formula | scoop | GitHub CLI |
+| shellcheck | brew formula | scoop | Shell script linter |
+| shfmt | brew formula | scoop | Shell formatter |
 | tree | brew formula | built-in | Directory tree |
 | PowerShell 7 | — | winget | Cross-platform shell |
 | Python 3 | brew formula | winget | Python runtime |
