@@ -34,17 +34,25 @@ Before asking the user anything, check if `EMAIL` and `EMAIL_PASSWORD` are alrea
 
 **Step 2: Ask for credentials (only if needed)**
 
-Ask the user for their Gmail address and app password in a single prompt:
+Ask two separate questions, one at a time:
 
-> To connect to your Gmail inbox, I need two things:
->
-> **1. Your email address** (e.g. `you@company.com`)
->
-> **2. An app password** — get one here: https://myaccount.google.com/apppasswords
-> - If 2-Step Verification isn't on yet, you'll need to enable it first
-> - Name it anything (e.g. "Email Planner") → Generate → copy the 16-char password
->
-> Paste them both below (e.g. `you@company.com xxxx xxxx xxxx xxxx`). Your password is never stored or logged.
+**Question 1 — Email address:**
+Ask the user for their Gmail or Google Workspace email address. Keep it short:
+> What's your Gmail / Google Workspace email address?
+
+**Then, before asking the second question, show these setup instructions as plain text (not as a question):**
+
+> To connect to your inbox, I need an app password. Here's how to get one:
+> 1. Go to https://myaccount.google.com/apppasswords
+> 2. If 2-Step Verification isn't on yet, enable it first
+> 3. Name it anything (e.g. "Email Planner") → Generate
+> 4. Copy the 16-character password (spaces don't matter)
+
+**Question 2 — App password:**
+Then ask for the password:
+> Paste your app password:
+
+Do not echo, log, or repeat the password back to the user.
 
 **Step 3: Run the script**
 
