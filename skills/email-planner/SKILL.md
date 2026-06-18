@@ -42,8 +42,10 @@ Ask: What's your Gmail address?
 After the user answers, output these instructions as plain text (not a question, no markdown):
 
 To connect to your inbox, I need an app password.
-Get one at: https://myaccount.google.com/apppasswords
-(Enable 2-Step Verification first if needed. Name it anything → Generate → copy the 16-char password.)
+1. Go to https://myaccount.google.com/apppasswords
+2. Enable 2-Step Verification first if needed
+3. Name it anything (e.g. "Email Planner") and click Generate
+4. Copy the 16-char password
 
 **Question 2:**
 Ask: Paste your app password:
