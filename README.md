@@ -33,24 +33,17 @@ Download the repo and **double-click `install-dev-tools.cmd`**. That's it.
 
 The installer handles everything:
 - Installs Git, Node.js, Python, VS Code, opencode CLI via winget
-- Installs gcloud CLI, ripgrep, fd, bat, gh, and more via Scoop
+- Installs gcloud CLI, ripgrep, fd, bat, gh, shellcheck, shfmt and more via Scoop
 - Downloads and installs rtk (Rust Token Killer) from GitHub
 - Installs pnpm and Google Workspace CLI via npm
-- Configures rtk for opencode
+- Configures rtk for opencode and adds it to PATH
+- Installs opencode skills (email-planner)
 
 > **Tip:** To avoid the "Open File – Security Warning" dialog, use `git clone` instead of downloading a ZIP:
 > ```powershell
 > git clone https://github.com/FirstPage-Glass/ai-agent-empowering-script.git
 > cd ai-agent-empowering-script
 > ```
-
-### One line (PowerShell)
-
-Open a **normal (non-admin) PowerShell** and run:
-
-```powershell
-irm https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script/main/install-dev-tools.cmd | iex
-```
 
 ### Flags
 
