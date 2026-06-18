@@ -14,7 +14,7 @@ set "RTK_URL=https://github.com/rtk-ai/rtk/releases/download/%RTK_VER%/rtk-x86_6
 set "RTK_DIR=%USERPROFILE%\.local\bin"
 
 set "STEP=0"
-set "TOTAL=8"
+set "TOTAL=9"
 
 set "ARGS=%*"
 for %%a in (%ARGS%) do set "MODE=%%a"
@@ -51,10 +51,14 @@ call :ok
 
 call :step "Verifying installations"
 call :verify_step
-call :ok
+if %errorlevel% neq 0 (call :fail) else (call :ok)
 
 call :step "Configuring tools"
 call :configure_step
+call :ok
+
+call :step "Installing skills"
+call :install_skills
 call :ok
 
 echo.
@@ -103,9 +107,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command scoop -e
 goto :eof
 
 :scoop_apps_step
-powershell -NoProfile -ExecutionPolicy Bypass -Command "scoop bucket list | findstr extras >nul; if ($LASTEXITCODE -ne 0) { scoop bucket add extras }"
+pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$p=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine');" ^
+  "$env:Path=$p;" ^
+  "scoop bucket list | findstr extras | Out-Null;" ^
+  "if ($LASTEXITCODE -ne 0) { scoop bucket add extras }"
 for %%p in (gcloud ripgrep fd jq yq bat gh shellcheck shfmt) do (
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command %%p -ea 0) { exit 0 }; $null = scoop install %%p 2>&1; exit 0"
+  pwsh -NoProfile -ExecutionPolicy Bypass -Command "$env:Path=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine'); if (Get-Command %%p -ea 0) { exit 0 }; $null = scoop install %%p 2>&1; exit 0"
 )
 goto :eof
 
@@ -145,6 +153,7 @@ if defined FAILED (
   echo.
   echo %Y%!  Not found:!FAILED!%N%
   echo %Y%   Open a new terminal and try again.%N%
+  exit /b 1
 )
 goto :eof
 
@@ -153,7 +162,48 @@ if not exist "%RTK_DIR%\rtk.exe" exit /b 0
 powershell -NoProfile -ExecutionPolicy Bypass -Command "try { $null = & '%RTK_DIR%\rtk.exe' init -g --opencode 2>&1 } catch { }"
 goto :eof
 
+:install_skills
+set "SKILL_DIR=%USERPROFILE%\.config\opencode\skills"
+set "SKILL_NAME=email-planner"
+set "BASE_URL=https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script/main/skills"
+if not exist "%SKILL_DIR%\%SKILL_NAME%\scripts" mkdir "%SKILL_DIR%\%SKILL_NAME%\scripts"
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$wc = New-Object Net.WebClient;" ^
+  "$wc.DownloadFile('%BASE_URL%/%SKILL_NAME%/SKILL.md', '%SKILL_DIR%\%SKILL_NAME%\SKILL.md');" ^
+  "$wc.DownloadFile('%BASE_URL%/%SKILL_NAME%/scripts/email_planner.py', '%SKILL_DIR%\%SKILL_NAME%\scripts\email_planner.py')"
+REM Update opencode config to register skills path
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$c='%USERPROFILE%\.config\opencode\opencode.json';" ^
+  "$p='%USERPROFILE%\.config\opencode\skills';" ^
+  "if (-not (Test-Path $c)) {" ^
+  "  @{ '`$schema'='https://opencode.ai/config.json'; skills=@{ paths=@($p) } } | ConvertTo-Json -Depth 3 | Set-Content $c -Encoding UTF8;" ^
+  "  exit 0" ^
+  "};" ^
+  "$o = Get-Content $c -Raw | ConvertFrom-Json;" ^
+  "if (-not $o.skills) { $o | Add-Member skills @{ paths=@() } -Force };" ^
+  "if (-not $o.skills.paths) { $o.skills | Add-Member paths @() -Force };" ^
+  "if ($o.skills.paths -notcontains $p) { $o.skills.paths = @($o.skills.paths + @($p) | Select-Object -Unique) };" ^
+  "$o | ConvertTo-Json -Depth 3 | Set-Content $c -Encoding UTF8"
+goto :eof
+
+:uninstall_skills
+set "SKILL_DIR=%USERPROFILE%\.config\opencode\skills"
+set "SKILL_NAME=email-planner"
+if exist "%SKILL_DIR%\%SKILL_NAME%" rmdir /s /q "%SKILL_DIR%\%SKILL_NAME%"
+if exist "%SKILL_DIR%" (rd "%SKILL_DIR%" 2>nul || cd .)
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$c='%USERPROFILE%\.config\opencode\opencode.json';" ^
+  "$p='%USERPROFILE%\.config\opencode\skills';" ^
+  "if (-not (Test-Path $c)) { exit 0 };" ^
+  "$o = Get-Content $c -Raw | ConvertFrom-Json;" ^
+  "if ($o.skills -and $o.skills.paths) { $o.skills.paths = @($o.skills.paths | Where-Object { $_ -ne $p }) };" ^
+   "if ($o.skills -and $o.skills.paths -and @($o.skills.paths).Count -eq 0) { $o.skills.PSObject.Properties.Remove('paths') };" ^
+   "if ($o.skills -and $o.skills.PSObject.Properties.Count -eq 0) { $o.PSObject.Properties.Remove('skills') };" ^
+  "$o | ConvertTo-Json -Depth 3 | Set-Content $c -Encoding UTF8"
+goto :eof
+
 :uninstall
+set "TOTAL=5"
 echo.
 echo %W%Uninstalling tools...%N%
 echo.
@@ -168,6 +218,9 @@ for %%p in (SST.opencode Google.CloudSDK) do winget uninstall --id %%p --silent 
 call :ok
 call :step "Removing rtk"
 if exist "%RTK_DIR%\rtk.exe" del "%RTK_DIR%\rtk.exe"
+call :ok
+call :step "Removing skills"
+call :uninstall_skills
 call :ok
 echo.
 echo %W%Uninstall complete.%N%
