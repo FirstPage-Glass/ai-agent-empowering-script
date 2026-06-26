@@ -14,7 +14,7 @@ set "RTK_URL=https://github.com/rtk-ai/rtk/releases/download/%RTK_VER%/rtk-x86_6
 set "RTK_DIR=%USERPROFILE%\.local\bin"
 
 set "STEP=0"
-set "TOTAL=9"
+set "TOTAL=10"
 
 rem Parse arguments — --quiet/-q suppresses output; pass "uninstall" to uninstall
 set "QUIET="
@@ -26,13 +26,15 @@ for %%a in (%*) do (
 
 if defined MODE goto :uninstall
 
-rem Output redirection helpers for PowerShell commands
+rem Output redirection helpers
 if defined QUIET (
   set "PS_REDIR=*>$null"
-  set "WINGET_SILENT=>nul 2>nul"
+  set "WINGET_FLAGS=--silent"
+  set "WINGET_REDIR=>nul 2>nul"
 ) else (
   set "PS_REDIR="
-  set "WINGET_SILENT="
+  set "WINGET_FLAGS="
+  set "WINGET_REDIR="
 )
 
 echo.
@@ -53,6 +55,10 @@ call :ok
 
 call :step "Installing rtk"
 call :rtk_step
+call :ok
+
+call :step "Installing opencode"
+call :install_opencode_ext
 call :ok
 
 call :step "Installing npm packages"
@@ -107,27 +113,27 @@ call :winstall OpenJS.NodeJS.LTS
 call :winstall Python.Python.3.14
 call :winstall Microsoft.PowerShell
 call :winstall Microsoft.VisualStudioCode
-call :install_opencode_ext
 goto :eof
 
 :winstall
-winget list --id "%~1" --accept-source-agreements !WINGET_SILENT!
+winget list --id "%~1" --accept-source-agreements !WINGET_REDIR!
 if %errorlevel% equ 0 exit /b 0
-winget install --id "%~1" --silent --accept-package-agreements --accept-source-agreements !WINGET_SILENT!
+winget install --id "%~1" !WINGET_FLAGS! --accept-package-agreements --accept-source-agreements !WINGET_REDIR!
 exit /b 0
 
 :install_opencode_ext
-rem Install OpenCode VS Code extension from GitHub releases instead of winget
-rem Winget SST.opencode is unreliable; use the VS Code extension directly
+rem Download opencode CLI directly from GitHub releases to .local\bin
+rem Winget SST.opencode is a portable package with unreliable PATH handling
+set "OPENCODE_URL=https://github.com/anomalyco/opencode/releases/latest/download/opencode-windows-x64.zip"
+if exist "%RTK_DIR%\opencode.exe" exit /b 0
+if not exist "%RTK_DIR%" mkdir "%RTK_DIR%"
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$c = @(^
-    '%LOCALAPPDATA%\Programs\Microsoft VS Code\bin\code.cmd',^
-    '%ProgramFiles%\Microsoft VS Code\bin\code.cmd',^
-    '%ProgramFiles(x86)%\Microsoft VS Code\bin\code.cmd'^
-  ) |? { Test-Path $_ } | select -First 1;" ^
-  "if (-not $c) { exit 0 }; " ^
-  "if (@(& $c --list-extensions 2>$null) -contains 'sst-dev.opencode') { exit 0 }; " ^
-  "& $c --install-extension sst-dev.opencode !PS_REDIR!; exit 0"
+  "$wc = New-Object Net.WebClient;" ^
+  "try { $wc.DownloadFile('%OPENCODE_URL%', '%TEMP%\opencode.zip') } catch { exit 1 };" ^
+  "try { Expand-Archive '%TEMP%\opencode.zip' '%RTK_DIR%' -Force } catch { exit 1 };" ^
+  "Remove-Item '%TEMP%\opencode.zip' -Force -ea 0;" ^
+  "$p = [Environment]::GetEnvironmentVariable('Path','User');" ^
+  "if ($p -notlike '*\.local\bin*') { [Environment]::SetEnvironmentVariable('Path',$p+';%RTK_DIR%','User') }"
 goto :eof
 
 :scoop_step
@@ -256,10 +262,11 @@ call :step "Uninstalling Scoop packages"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "@('gcloud','ripgrep','fd','jq','yq','bat','gh','shellcheck','shfmt') | %% { scoop uninstall $_ !PS_REDIR! }"
 call :ok
 call :step "Uninstalling winget packages"
-for %%p in (Google.CloudSDK) do winget uninstall --id %%p --silent --accept-source-agreements !WINGET_SILENT!
+for %%p in (Google.CloudSDK) do winget uninstall --id %%p !WINGET_FLAGS! --accept-source-agreements !WINGET_REDIR!
 call :ok
-call :step "Removing rtk"
+call :step "Removing rtk and opencode"
 if exist "%RTK_DIR%\rtk.exe" del "%RTK_DIR%\rtk.exe"
+if exist "%RTK_DIR%\opencode.exe" del "%RTK_DIR%\opencode.exe"
 call :ok
 call :step "Removing skills"
 call :uninstall_skills
