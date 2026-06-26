@@ -145,9 +145,10 @@ pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "$p=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine');" ^
   "$env:Path=$p;" ^
   "scoop bucket list | findstr extras | Out-Null;" ^
-  "if ($LASTEXITCODE -ne 0) { scoop bucket add extras }"
+  "if ($LASTEXITCODE -ne 0) { scoop bucket add extras }; " ^
+  "scoop config checkhash false 2>&1 | Out-Null"
 for %%p in (gcloud ripgrep fd jq yq bat gh shellcheck shfmt) do (
-  pwsh -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command %%p -ea 0) { exit 0 }; scoop install --no-hash-check %%p !PS_REDIR!; exit 0"
+  pwsh -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command %%p -ea 0) { exit 0 }; scoop install %%p !PS_REDIR!; exit 0"
 )
 goto :eof
 
@@ -169,15 +170,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command gws -ea 
 goto :eof
 
 :vscode_step
+for %%p in ("%LOCALAPPDATA%\Programs\Microsoft VS Code\bin\code.cmd" "%ProgramFiles%\Microsoft VS Code\bin\code.cmd" "%ProgramFiles(x86)%\Microsoft VS Code\bin\code.cmd") do (
+  if exist %%p set "CODE_CMD=%%~p"
+)
+if not defined CODE_CMD exit /b 0
 powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-  "$c = @(^
-    '%LOCALAPPDATA%\Programs\Microsoft VS Code\bin\code.cmd',^
-    '%ProgramFiles%\Microsoft VS Code\bin\code.cmd',^
-    '%ProgramFiles(x86)%\Microsoft VS Code\bin\code.cmd'^
-  ) |? { Test-Path $_ } | select -First 1;" ^
-  "if (-not $c) { exit 0 }; " ^
-  "if (@(& $c --list-extensions 2>$null) -contains 'sst-dev.opencode') { exit 0 }; " ^
-  "& $c --install-extension sst-dev.opencode !PS_REDIR!; exit 0"
+  "if (@(& '%CODE_CMD%' --list-extensions 2>$null) -contains 'sst-dev.opencode') { exit 0 }; " ^
+  "& '%CODE_CMD%' --install-extension sst-dev.opencode !PS_REDIR!; exit 0"
 goto :eof
 
 :verify_step
