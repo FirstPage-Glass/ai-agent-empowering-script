@@ -148,7 +148,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "scoop bucket list | findstr extras | Out-Null;" ^
   "if ($LASTEXITCODE -ne 0) { scoop bucket add extras }"
 for %%p in (gcloud ripgrep fd jq yq bat gh shellcheck shfmt) do (
-  powershell -NoProfile -ExecutionPolicy Bypass -Command "$p=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine'); $env:Path=$p; if (Get-Command %%p -ea 0) { exit 0 }; scoop install %%p -s !PS_REDIR!; exit 0"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$p=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine'); $env:Path=$p; if (Get-Command %%p -ea 0) { exit 0 }; scoop install %%p !PS_REDIR!; exit 0"
 )
 goto :eof
 
