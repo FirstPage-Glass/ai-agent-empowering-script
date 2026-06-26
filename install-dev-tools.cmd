@@ -146,7 +146,7 @@ pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
   "$env:Path=$p;" ^
   "scoop bucket list | findstr extras | Out-Null;" ^
   "if ($LASTEXITCODE -ne 0) { scoop bucket add extras }; " ^
-  "scoop config checkhash false 2>&1 | Out-Null"
+  "scoop config check_hash false 2>&1 | Out-Null"
 for %%p in (gcloud ripgrep fd jq yq bat gh shellcheck shfmt) do (
   pwsh -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command %%p -ea 0) { exit 0 }; scoop install %%p !PS_REDIR!; exit 0"
 )
