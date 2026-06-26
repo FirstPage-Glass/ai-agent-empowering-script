@@ -10,14 +10,14 @@ VERBOSE="false"
 
 LOCAL_BIN="$HOME/.local/bin"
 APPS_DIR="$HOME/Applications"
+GCLOUD_DIR="$HOME/.local/share/google-cloud-sdk"
 TEMP_DIR=""
+RESULTS_DIR=""
 
 SKILLS_DIR="$HOME/.config/opencode/skills"
 OPENCODE_CONFIG="$HOME/.config/opencode/opencode.jsonc"
 SKILL_BASE_URL="https://raw.githubusercontent.com/FirstPage-Glass/ai-agent-empowering-script/main/skills"
 SKILLS=(email-planner)
-
-declare -A RESULTS=()
 
 die() { printf "${RED}✘ %b${NC}\n" "$*" >&2; exit 1; }
 
@@ -46,9 +46,13 @@ ARCH="$(uname -m)"
 if [[ "$ARCH" == "arm64" ]]; then
   ARCH_SUFFIX="arm64"
   ARCH_DARWIN="aarch64-apple-darwin"
+  ARCH_GCLOUD="arm"
+  ARCH_VSCODE="arm64"
 elif [[ "$ARCH" == "x86_64" ]]; then
   ARCH_SUFFIX="amd64"
   ARCH_DARWIN="x86_64-apple-darwin"
+  ARCH_GCLOUD="x86_64"
+  ARCH_VSCODE="x64"
 else
   die "Unsupported architecture: $ARCH"
 fi
@@ -57,7 +61,21 @@ setup_dirs() {
   mkdir -p "$LOCAL_BIN"
   mkdir -p "$APPS_DIR"
   TEMP_DIR="$(mktemp -d)"
+  RESULTS_DIR="$TEMP_DIR/results"
+  mkdir -p "$RESULTS_DIR"
   trap 'rm -rf "$TEMP_DIR"' EXIT
+}
+
+set_result() {
+  echo "$2" > "$RESULTS_DIR/$1"
+}
+
+get_result() {
+  if [[ -f "$RESULTS_DIR/$1" ]]; then
+    cat "$RESULTS_DIR/$1"
+  else
+    echo "unknown"
+  fi
 }
 
 add_to_path() {
@@ -72,14 +90,6 @@ add_to_path() {
   export PATH="$LOCAL_BIN:$PATH"
 }
 
-run_quiet() {
-  if [[ "$VERBOSE" == "true" ]]; then
-    "$@"
-  else
-    "$@" >/dev/null 2>&1
-  fi
-}
-
 get_latest_version() {
   local repo="$1"
   curl -fsSL "https://api.github.com/repos/$repo/releases/latest" | grep '"tag_name"' | cut -d'"' -f4 | head -1
@@ -88,150 +98,152 @@ get_latest_version() {
 install_nodejs() {
   local name="nodejs"
   if command -v node >/dev/null 2>&1; then
-    RESULTS[$name]="skipped"
+    set_result "$name" "skipped"
     return 0
   fi
   if [[ "$DRY_RUN" == "true" ]]; then
-    RESULTS[$name]="dry-run"
+    set_result "$name" "dry-run"
     return 0
   fi
-  if curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.0/install.sh | bash >/dev/null 2>&1; then
+  if curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash >/dev/null 2>&1; then
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
     if nvm install --lts >/dev/null 2>&1; then
-      RESULTS[$name]="success"
+      set_result "$name" "success"
       return 0
     fi
   fi
-  RESULTS[$name]="failed"
+  set_result "$name" "failed"
   return 1
 }
 
 install_opencode() {
   local name="opencode"
   if command -v opencode >/dev/null 2>&1; then
-    RESULTS[$name]="skipped"
+    set_result "$name" "skipped"
     return 0
   fi
   if [[ "$DRY_RUN" == "true" ]]; then
-    RESULTS[$name]="dry-run"
+    set_result "$name" "dry-run"
     return 0
   fi
   if curl -fsSL https://opencode.ai/install | bash >/dev/null 2>&1; then
-    RESULTS[$name]="success"
+    set_result "$name" "success"
     return 0
   fi
-  RESULTS[$name]="failed"
+  set_result "$name" "failed"
   return 1
 }
 
 install_gcloud() {
   local name="gcloud"
   if command -v gcloud >/dev/null 2>&1; then
-    RESULTS[$name]="skipped"
+    set_result "$name" "skipped"
     return 0
   fi
   if [[ "$DRY_RUN" == "true" ]]; then
-    RESULTS[$name]="dry-run"
+    set_result "$name" "dry-run"
     return 0
   fi
-  local url="https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-darwin-${ARCH}.tar.gz"
+  local url="https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-darwin-${ARCH_GCLOUD}.tar.gz"
   local tarball="$TEMP_DIR/gcloud.tar.gz"
   if curl -fsSL "$url" -o "$tarball" && tar -xzf "$tarball" -C "$TEMP_DIR"; then
-    if "$TEMP_DIR/google-cloud-sdk/install.sh" --quiet --usage-reporting false --path-update false >/dev/null 2>&1; then
-      export PATH="$TEMP_DIR/google-cloud-sdk/bin:$PATH"
-      RESULTS[$name]="success"
+    rm -rf "$GCLOUD_DIR"
+    mv "$TEMP_DIR/google-cloud-sdk" "$GCLOUD_DIR"
+    if "$GCLOUD_DIR/install.sh" --quiet --usage-reporting false --path-update false >/dev/null 2>&1; then
+      export PATH="$GCLOUD_DIR/bin:$PATH"
+      set_result "$name" "success"
       return 0
     fi
   fi
-  RESULTS[$name]="failed"
+  set_result "$name" "failed"
   return 1
 }
 
 install_vscode() {
   local name="vscode"
   if [[ -d "$APPS_DIR/Visual Studio Code.app" ]]; then
-    RESULTS[$name]="skipped"
+    set_result "$name" "skipped"
     return 0
   fi
   if [[ "$DRY_RUN" == "true" ]]; then
-    RESULTS[$name]="dry-run"
+    set_result "$name" "dry-run"
     return 0
   fi
-  local url="https://update.code.visualstudio.com/latest/darwin-${ARCH}/stable"
+  local url="https://update.code.visualstudio.com/latest/darwin-${ARCH_VSCODE}/stable"
   local zipfile="$TEMP_DIR/vscode.zip"
   if curl -fsSL "$url" -o "$zipfile" && unzip -q "$zipfile" -d "$APPS_DIR"; then
     ln -sf "$APPS_DIR/Visual Studio Code.app/Contents/Resources/app/bin/code" "$LOCAL_BIN/code"
-    RESULTS[$name]="success"
+    set_result "$name" "success"
     return 0
   fi
-  RESULTS[$name]="failed"
+  set_result "$name" "failed"
   return 1
 }
 
 install_pnpm() {
   local name="pnpm"
   if command -v pnpm >/dev/null 2>&1; then
-    RESULTS[$name]="skipped"
+    set_result "$name" "skipped"
     return 0
   fi
   if [[ "$DRY_RUN" == "true" ]]; then
-    RESULTS[$name]="dry-run"
+    set_result "$name" "dry-run"
     return 0
   fi
   if ! command -v node >/dev/null 2>&1; then
-    RESULTS[$name]="waiting"
+    set_result "$name" "waiting"
     return 1
   fi
   if curl -fsSL https://get.pnpm.io/install.sh | sh - >/dev/null 2>&1; then
-    RESULTS[$name]="success"
+    set_result "$name" "success"
     return 0
   fi
-  RESULTS[$name]="failed"
+  set_result "$name" "failed"
   return 1
 }
 
 install_gws() {
   local name="gws"
   if command -v gws >/dev/null 2>&1; then
-    RESULTS[$name]="skipped"
+    set_result "$name" "skipped"
     return 0
   fi
   if [[ "$DRY_RUN" == "true" ]]; then
-    RESULTS[$name]="dry-run"
+    set_result "$name" "dry-run"
     return 0
   fi
   if ! command -v node >/dev/null 2>&1; then
-    RESULTS[$name]="waiting"
+    set_result "$name" "waiting"
     return 1
   fi
   if npm install -g @googleworkspace/cli >/dev/null 2>&1; then
-    RESULTS[$name]="success"
+    set_result "$name" "success"
     return 0
   fi
-  RESULTS[$name]="failed"
+  set_result "$name" "failed"
   return 1
 }
 
 install_rtk() {
   local name="rtk"
   if command -v rtk >/dev/null 2>&1; then
-    RESULTS[$name]="skipped"
+    set_result "$name" "skipped"
     return 0
   fi
   if [[ "$DRY_RUN" == "true" ]]; then
-    RESULTS[$name]="dry-run"
+    set_result "$name" "dry-run"
     return 0
   fi
   if ! command -v node >/dev/null 2>&1; then
-    RESULTS[$name]="waiting"
+    set_result "$name" "waiting"
     return 1
   fi
   if npm install -g rtk >/dev/null 2>&1; then
-    RESULTS[$name]="success"
+    set_result "$name" "success"
     return 0
   fi
-  RESULTS[$name]="failed"
+  set_result "$name" "failed"
   return 1
 }
 
@@ -241,45 +253,45 @@ download_and_extract() {
   local archive_type="$3"
   local binary_name="$4"
   local extract_cmd="$5"
-  
+
   if command -v "$binary_name" >/dev/null 2>&1; then
-    RESULTS[$name]="skipped"
+    set_result "$name" "skipped"
     return 0
   fi
   if [[ "$DRY_RUN" == "true" ]]; then
-    RESULTS[$name]="dry-run"
+    set_result "$name" "dry-run"
     return 0
   fi
-  
+
   local archive="$TEMP_DIR/$name.$archive_type"
   if ! curl -fsSL "$url" -o "$archive"; then
-    RESULTS[$name]="failed"
+    set_result "$name" "failed"
     return 1
   fi
-  
+
   local extract_dir="$TEMP_DIR/$name"
   mkdir -p "$extract_dir"
-  
+
   if [[ "$archive_type" == "tar.gz" ]]; then
-    tar -xzf "$archive" -C "$extract_dir"
+    tar -xzf "$archive" -C "$extract_dir" 2>/dev/null || true
   elif [[ "$archive_type" == "zip" ]]; then
-    unzip -q "$archive" -d "$extract_dir"
+    unzip -q "$archive" -d "$extract_dir" 2>/dev/null || true
   fi
-  
+
   local binary_path
   if [[ -n "$extract_cmd" ]]; then
     binary_path="$(eval "$extract_cmd")"
   else
     binary_path="$extract_dir/$binary_name"
   fi
-  
+
   if [[ -f "$binary_path" ]]; then
     cp "$binary_path" "$LOCAL_BIN/$binary_name"
     chmod +x "$LOCAL_BIN/$binary_name"
-    RESULTS[$name]="success"
+    set_result "$name" "success"
     return 0
   fi
-  RESULTS[$name]="failed"
+  set_result "$name" "failed"
   return 1
 }
 
@@ -298,42 +310,44 @@ install_fd() {
 }
 
 install_jq() {
+  local name="jq"
   local version
   version="$(get_latest_version jqlang/jq)"
   local url="https://github.com/jqlang/jq/releases/download/$version/jq-macos-${ARCH_SUFFIX}"
   if command -v jq >/dev/null 2>&1; then
-    RESULTS["jq"]="skipped"
+    set_result "$name" "skipped"
     return 0
   fi
   if [[ "$DRY_RUN" == "true" ]]; then
-    RESULTS["jq"]="dry-run"
+    set_result "$name" "dry-run"
     return 0
   fi
   if curl -fsSL "$url" -o "$LOCAL_BIN/jq" && chmod +x "$LOCAL_BIN/jq"; then
-    RESULTS["jq"]="success"
+    set_result "$name" "success"
     return 0
   fi
-  RESULTS["jq"]="failed"
+  set_result "$name" "failed"
   return 1
 }
 
 install_yq() {
+  local name="yq"
   local version
   version="$(get_latest_version mikefarah/yq)"
   local url="https://github.com/mikefarah/yq/releases/download/$version/yq_darwin_${ARCH_SUFFIX}"
   if command -v yq >/dev/null 2>&1; then
-    RESULTS["yq"]="skipped"
+    set_result "$name" "skipped"
     return 0
   fi
   if [[ "$DRY_RUN" == "true" ]]; then
-    RESULTS["yq"]="dry-run"
+    set_result "$name" "dry-run"
     return 0
   fi
   if curl -fsSL "$url" -o "$LOCAL_BIN/yq" && chmod +x "$LOCAL_BIN/yq"; then
-    RESULTS["yq"]="success"
+    set_result "$name" "success"
     return 0
   fi
-  RESULTS["yq"]="failed"
+  set_result "$name" "failed"
   return 1
 }
 
@@ -352,49 +366,51 @@ install_gh() {
 }
 
 install_shellcheck() {
+  local name="shellcheck"
   local version
   version="$(get_latest_version koalaman/shellcheck)"
   local url="https://github.com/koalaman/shellcheck/releases/download/$version/shellcheck-${version}.darwin.${ARCH}.tar.xz"
   if command -v shellcheck >/dev/null 2>&1; then
-    RESULTS["shellcheck"]="skipped"
+    set_result "$name" "skipped"
     return 0
   fi
   if [[ "$DRY_RUN" == "true" ]]; then
-    RESULTS["shellcheck"]="dry-run"
+    set_result "$name" "dry-run"
     return 0
   fi
   local archive="$TEMP_DIR/shellcheck.tar.xz"
-  if curl -fsSL "$url" -o "$archive" && tar -xJf "$archive" -C "$TEMP_DIR"; then
+  if curl -fsSL "$url" -o "$archive" && tar -xJf "$archive" -C "$TEMP_DIR" 2>/dev/null; then
     local binary_path
-    binary_path="$(find $TEMP_DIR -name shellcheck -type f | head -1)"
+    binary_path="$(find "$TEMP_DIR" -name shellcheck -type f | head -1)"
     if [[ -f "$binary_path" ]]; then
       cp "$binary_path" "$LOCAL_BIN/shellcheck"
       chmod +x "$LOCAL_BIN/shellcheck"
-      RESULTS["shellcheck"]="success"
+      set_result "$name" "success"
       return 0
     fi
   fi
-  RESULTS["shellcheck"]="failed"
+  set_result "$name" "failed"
   return 1
 }
 
 install_shfmt() {
+  local name="shfmt"
   local version
   version="$(get_latest_version mvdan/sh)"
   local url="https://github.com/mvdan/sh/releases/download/$version/shfmt_${version}_darwin_${ARCH_SUFFIX}"
   if command -v shfmt >/dev/null 2>&1; then
-    RESULTS["shfmt"]="skipped"
+    set_result "$name" "skipped"
     return 0
   fi
   if [[ "$DRY_RUN" == "true" ]]; then
-    RESULTS["shfmt"]="dry-run"
+    set_result "$name" "dry-run"
     return 0
   fi
   if curl -fsSL "$url" -o "$LOCAL_BIN/shfmt" && chmod +x "$LOCAL_BIN/shfmt"; then
-    RESULTS["shfmt"]="success"
+    set_result "$name" "success"
     return 0
   fi
-  RESULTS["shfmt"]="failed"
+  set_result "$name" "failed"
   return 1
 }
 
@@ -404,8 +420,8 @@ install_skills() {
   for skill in "${SKILLS[@]}"; do
     local dest="$SKILLS_DIR/$skill"
     mkdir -p "$dest/scripts"
-    curl -fsSL "$SKILL_BASE_URL/$skill/SKILL.md" -o "$dest/SKILL.md"
-    curl -fsSL "$SKILL_BASE_URL/$skill/scripts/email_planner.py" -o "$dest/scripts/email_planner.py"
+    curl -fsSL "$SKILL_BASE_URL/$skill/SKILL.md" -o "$dest/SKILL.md" || true
+    curl -fsSL "$SKILL_BASE_URL/$skill/scripts/email_planner.py" -o "$dest/scripts/email_planner.py" || true
   done
   update_opencode_config
 }
@@ -464,6 +480,8 @@ uninstall_skills() {
   fi
 }
 
+INSTALLED_BINARIES=(rg fd jq yq bat gh shellcheck shfmt code)
+
 uninstall_all() {
   if [[ "$ASSUME_YES" != "true" && "$DRY_RUN" != "true" ]]; then
     printf "%b" "${YELLOW}!  Uninstall all tools installed by this script? Type 'yes' to continue: ${NC}"
@@ -473,21 +491,23 @@ uninstall_all() {
 
   echo ""
   echo "${BLUE}Uninstalling tools...${NC}"
-  
-  rm -rf "$LOCAL_BIN"
+
+  for bin in "${INSTALLED_BINARIES[@]}"; do
+    rm -f "$LOCAL_BIN/$bin"
+  done
+  rm -rf "$GCLOUD_DIR"
   rm -rf "$APPS_DIR/Visual Studio Code.app"
   rm -rf "$HOME/.nvm"
-  rm -rf "$HOME/.opencode"
-  
+
   uninstall_skills
-  
+
   local shell_rc="$HOME/.zshrc"
   if [[ -f "$shell_rc" ]]; then
     sed -i.bak "/# Added by install-dev-tools-macos.sh/d" "$shell_rc"
-    sed -i.bak "/$LOCAL_BIN/d" "$shell_rc"
+    sed -i.bak "\#${LOCAL_BIN}#d" "$shell_rc"
     rm -f "${shell_rc}.bak"
   fi
-  
+
   echo ""
   echo "${BOLD}Uninstall complete.${NC}"
   exit 0
@@ -495,7 +515,8 @@ uninstall_all() {
 
 print_result() {
   local name="$1"
-  local status="${RESULTS[$name]:-unknown}"
+  local status
+  status="$(get_result "$name")"
   case "$status" in
     success) printf "  ${GREEN}✓${NC} %-16s installed\n" "$name" ;;
     skipped) printf "  ${BLUE}−${NC} %-16s already installed\n" "$name" ;;
@@ -534,7 +555,7 @@ install_gh &
 install_shellcheck &
 install_shfmt &
 
-wait $NODE_PID
+wait $NODE_PID || true
 
 echo ""
 echo "${BLUE}Phase 2: npm packages (requires Node.js)${NC}"
@@ -542,15 +563,15 @@ echo "${BLUE}Phase 2: npm packages (requires Node.js)${NC}"
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
-install_pnpm
-install_gws
-install_rtk
+install_pnpm || true
+install_gws || true
+install_rtk || true
 
 wait
 
 echo ""
 echo "${BLUE}Phase 3: Skills${NC}"
-install_skills
+install_skills || true
 
 echo ""
 echo "${BOLD}Installation Summary${NC}"
@@ -572,11 +593,12 @@ print_result "gh"
 print_result "shellcheck"
 print_result "shfmt"
 
-local success=0
-local total=0
-for key in "${!RESULTS[@]}"; do
+success=0
+total=0
+for key in "${INSTALLED_BINARIES[@]}" nodejs opencode vscode pnpm gws rtk ripgrep fd jq yq bat gh shellcheck shfmt; do
   total=$((total + 1))
-  if [[ "${RESULTS[$key]}" == "success" || "${RESULTS[$key]}" == "skipped" ]]; then
+  status="$(get_result "$key")"
+  if [[ "$status" == "success" || "$status" == "skipped" ]]; then
     success=$((success + 1))
   fi
 done
