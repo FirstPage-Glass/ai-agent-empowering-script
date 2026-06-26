@@ -9,8 +9,7 @@ set "B=%ESC%[94m"
 set "W=%ESC%[1m"
 set "N=%ESC%[0m"
 
-set "RTK_VER=v0.42.4"
-set "RTK_URL=https://github.com/rtk-ai/rtk/releases/download/%RTK_VER%/rtk-x86_64-pc-windows-msvc.zip"
+set "RTK_URL=https://github.com/rtk-ai/rtk/releases/latest/download/rtk-x86_64-pc-windows-msvc.zip"
 set "RTK_DIR=%USERPROFILE%\.local\bin"
 
 set "STEP=0"
@@ -119,7 +118,7 @@ goto :eof
 winget list --id "%~1" --accept-source-agreements !WINGET_REDIR!
 if %errorlevel% equ 0 exit /b 0
 winget install --id "%~1" !WINGET_FLAGS! --accept-package-agreements --accept-source-agreements !WINGET_REDIR!
-exit /b 0
+exit /b
 
 :install_opencode_ext
 rem Download opencode CLI directly from GitHub releases to .local\bin
@@ -133,7 +132,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "try { Expand-Archive '%TEMP%\opencode.zip' '%RTK_DIR%' -Force } catch { exit 1 };" ^
   "Remove-Item '%TEMP%\opencode.zip' -Force -ea 0;" ^
   "$p = [Environment]::GetEnvironmentVariable('Path','User');" ^
-  "if ($p -notlike '*\.local\bin*') { [Environment]::SetEnvironmentVariable('Path',$p+';%RTK_DIR%','User') }"
+  "if ($p -notlike '*%RTK_DIR%*') { [Environment]::SetEnvironmentVariable('Path',$p+';%RTK_DIR%','User') }"
 goto :eof
 
 :scoop_step
@@ -141,14 +140,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command scoop -e
 goto :eof
 
 :scoop_apps_step
-pwsh -NoProfile -ExecutionPolicy Bypass -Command ^
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "$p=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine');" ^
   "$env:Path=$p;" ^
   "scoop bucket list | findstr extras | Out-Null;" ^
-  "if ($LASTEXITCODE -ne 0) { scoop bucket add extras }; " ^
-  "scoop config check_hash false 2>&1 | Out-Null"
+  "if ($LASTEXITCODE -ne 0) { scoop bucket add extras }"
 for %%p in (gcloud ripgrep fd jq yq bat gh shellcheck shfmt) do (
-  pwsh -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command %%p -ea 0) { exit 0 }; scoop install %%p !PS_REDIR!; exit 0"
+  powershell -NoProfile -ExecutionPolicy Bypass -Command "$p=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine'); $env:Path=$p; if (Get-Command %%p -ea 0) { exit 0 }; scoop install %%p --no-hash-check !PS_REDIR!; exit 0"
 )
 goto :eof
 
@@ -161,12 +159,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command ^
   "try { Expand-Archive '%TEMP%\rtk.zip' '%RTK_DIR%' -Force } catch { exit 1 };" ^
   "Remove-Item '%TEMP%\rtk.zip' -Force -ea 0;" ^
   "$p = [Environment]::GetEnvironmentVariable('Path','User');" ^
-  "if ($p -notlike '*\.local\bin*') { [Environment]::SetEnvironmentVariable('Path',$p+';%RTK_DIR%','User') }"
+  "if ($p -notlike '*%RTK_DIR%*') { [Environment]::SetEnvironmentVariable('Path',$p+';%RTK_DIR%','User') }"
 goto :eof
 
 :npm_step
-powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command pnpm -ea 0) { exit 0 }; npm install -g pnpm !PS_REDIR!; exit 0"
-powershell -NoProfile -ExecutionPolicy Bypass -Command "if (Get-Command gws -ea 0) { exit 0 }; npm install -g @googleworkspace/cli !PS_REDIR!; exit 0"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine'); $env:Path=$p; if (Get-Command pnpm -ea 0) { exit 0 }; npm install -g pnpm !PS_REDIR!; exit 0"
+powershell -NoProfile -ExecutionPolicy Bypass -Command "$p=[Environment]::GetEnvironmentVariable('Path','User')+';'+[Environment]::GetEnvironmentVariable('Path','Machine'); $env:Path=$p; if (Get-Command gws -ea 0) { exit 0 }; npm install -g @googleworkspace/cli !PS_REDIR!; exit 0"
 goto :eof
 
 :vscode_step
@@ -194,7 +192,8 @@ set "TOOLS=code opencode gcloud node pnpm rg fd jq yq bat gh shellcheck shfmt rt
 set "FAILED="
 set "RP=%RTK_DIR%"
 for %%t in (%TOOLS%) do (
-  where %%t >nul 2>nul || if exist "%RP%\%%t.exe" (cd .) else set "FAILED=!FAILED! %%t"
+  where %%t >nul 2>nul
+  if !errorlevel! neq 0 if not exist "%RP%\%%t.exe" set "FAILED=!FAILED! %%t"
 )
 if defined FAILED (
   echo.
@@ -261,7 +260,7 @@ call :step "Uninstalling Scoop packages"
 powershell -NoProfile -ExecutionPolicy Bypass -Command "@('gcloud','ripgrep','fd','jq','yq','bat','gh','shellcheck','shfmt') | %% { scoop uninstall $_ !PS_REDIR! }"
 call :ok
 call :step "Uninstalling winget packages"
-for %%p in (Google.CloudSDK) do winget uninstall --id %%p !WINGET_FLAGS! --accept-source-agreements !WINGET_REDIR!
+for %%p in (Git.Git OpenJS.NodeJS.LTS Python.Python.3.14 Microsoft.PowerShell Microsoft.VisualStudioCode) do winget uninstall --id %%p !WINGET_FLAGS! --accept-source-agreements !WINGET_REDIR!
 call :ok
 call :step "Removing rtk and opencode"
 if exist "%RTK_DIR%\rtk.exe" del "%RTK_DIR%\rtk.exe"
